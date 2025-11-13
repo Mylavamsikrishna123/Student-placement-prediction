@@ -1,0 +1,27 @@
+body {
+  background: linear-gradient(135deg, #4e73df, #1cc88a);
+  min-height: 100vh;
+  font-family: 'Poppins', sans-serif;
+}
+
+.card {
+  border: none;
+  border-radius: 15px;
+  box-shadow: 0px 5px 20px rgba(0,0,0,0.2);
+}
+
+.btn-custom {
+  background-color: #4e73df;
+  color: white;
+  transition: 0.3s;
+}
+
+.btn-custom:hover {
+  background-color: #2e59d9;
+  transform: scale(1.05);
+}
+
+.navbar-brand {
+  font-weight: 600;
+  letter-spacing: 1px;
+}
