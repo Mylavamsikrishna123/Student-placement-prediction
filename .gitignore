@@ -1,0 +1,52 @@
+# Build artifacts (but keep the final JAR)
+backend/target/classes/
+backend/target/generated-sources/
+backend/target/maven-archiver/
+backend/target/maven-status/
+backend/target/surefire-reports/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*.iml
+.classpath
+.project
+.settings/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+logs/
+
+# Dependencies
+node_modules/
+.m2/
+
+# Environment
+.env
+.env.local
+*.local
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+~*
+
+# Maven
+maven-wrapper.jar
+.mvn/wrapper/maven-wrapper.jar
+
+# Build directories
+dist/
+build/
+out/
+
+# Allow deployment JAR
+!backend/target/placement-backend-1.0.0-jar-with-dependencies.jar
