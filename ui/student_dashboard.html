@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Student Dashboard | Placement Predictor</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+.card { border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); margin-bottom:20px; }
+.star-rating { display:flex; gap:5px; cursor:pointer; }
+.star { font-size:24px; color:#ccc; }
+.star.selected { color: gold; }
+.skill-level-label { font-size: 12px; color: #666; margin-left: 10px; }
+</style>
+</head>
+<body>
+<nav class="navbar navbar-dark bg-dark">
+<div class="container-fluid">
+    <a class="navbar-brand" href="index.html">Student Dashboard</a>
+    <a href="user_login.html" class="btn btn-outline-light">Logout</a>
+</div>
+</nav>
+
+<div class="container mt-4">
+    <div class="card p-4">
+        <h4>Student Profile</h4>
+        <form id="studentForm">
+            <div class="mb-3">
+                <label>Name</label>
+                <input type="text" id="name" class="form-control" placeholder="Enter Name">
+            </div>
+            <div class="mb-3">
+                <label>ID Number</label>
+                <input type="text" id="idNumber" class="form-control" placeholder="Enter ID Number">
+            </div>
+            <div class="mb-3">
+                <label>Email</label>
+                <input type="email" id="email" class="form-control" placeholder="Enter Email" readonly>
+            </div>
+            <div class="mb-3">
+                <label>Department</label>
+                <input type="text" id="department" class="form-control" placeholder="Enter Department">
+            </div>
+            <div class="mb-3">
+                <label>Degree</label>
+                <select id="degree" class="form-control">
+                    <option value="">Select Degree</option>
+                    <option value="B.Tech">B.Tech</option>
+                    <option value="M.Tech">M.Tech</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label>College Name</label>
+                <input type="text" id="collegeName" class="form-control" placeholder="Enter College Name">
+            </div>
+            <div class="mb-3">
+                <label>Phone Number</label>
+                <input type="tel" id="phone" class="form-control" placeholder="Enter Phone Number">
+            </div>
+            <div class="mb-3">
+                <label>Overall CGPA</label>
+                <input type="number" id="cgpa" min="0" max="10" step="0.01" class="form-control" placeholder="Enter CGPA">
+            </div>
+
+            <h5 class="mt-3">Skills (Select Level: Beginner⭐, Medium⭐⭐, Advanced⭐⭐⭐)</h5>
+            <div id="skillsContainer">
+                <div class="mb-3">
+                    <label>Java <span class="skill-level-label" id="java-label"></span></label>
+                    <div class="star-rating" data-skill="Java">
+                        <span class="star" data-level="1">&#9733;</span>
+                        <span class="star" data-level="2">&#9733;</span>
+                        <span class="star" data-level="3">&#9733;</span>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label>Python <span class="skill-level-label" id="python-label"></span></label>
+                    <div class="star-rating" data-skill="Python">
+                        <span class="star" data-level="1">&#9733;</span>
+                        <span class="star" data-level="2">&#9733;</span>
+                        <span class="star" data-level="3">&#9733;</span>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label>C <span class="skill-level-label" id="c-label"></span></label>
+                    <div class="star-rating" data-skill="C">
+                        <span class="star" data-level="1">&#9733;</span>
+                        <span class="star" data-level="2">&#9733;</span>
+                        <span class="star" data-level="3">&#9733;</span>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label>C++ <span class="skill-level-label" id="cplus-label"></span></label>
+                    <div class="star-rating" data-skill="C++">
+                        <span class="star" data-level="1">&#9733;</span>
+                        <span class="star" data-level="2">&#9733;</span>
+                        <span class="star" data-level="3">&#9733;</span>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label>HTML <span class="skill-level-label" id="html-label"></span></label>
+                    <div class="star-rating" data-skill="HTML">
+                        <span class="star" data-level="1">&#9733;</span>
+                        <span class="star" data-level="2">&#9733;</span>
+                        <span class="star" data-level="3">&#9733;</span>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label>ReactJS <span class="skill-level-label" id="reactjs-label"></span></label>
+                    <div class="star-rating" data-skill="ReactJS">
+                        <span class="star" data-level="1">&#9733;</span>
+                        <span class="star" data-level="2">&#9733;</span>
+                        <span class="star" data-level="3">&#9733;</span>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label>SQL <span class="skill-level-label" id="sql-label"></span></label>
+                    <div class="star-rating" data-skill="SQL">
+                        <span class="star" data-level="1">&#9733;</span>
+                        <span class="star" data-level="2">&#9733;</span>
+                        <span class="star" data-level="3">&#9733;</span>
+                    </div>
+                </div>
+            </div>
+            <button type="button" class="btn btn-custom mt-3" onclick="saveProfile()">Save Profile</button>
+            <button type="button" class="btn btn-secondary mt-3 ms-2" onclick="checkEligibility()">Show Eligible Companies</button>
+        </form>
+    </div>
+
+    <div class="card p-4 mt-3">
+        <h4>Eligible Companies</h4>
+        <ul id="eligibleCompanies" class="list-group"></ul>
+    </div>
+</div>
+
+<script>
+// Load email from sessionStorage
+const studentEmail = sessionStorage.getItem('studentEmail');
+if (studentEmail) {
+    document.getElementById('email').value = studentEmail;
+}
+
+// Skill level labels
+const levelLabels = ['', 'Beginner', 'Medium', 'Advanced'];
+
+// Star Rating (3 stars: Beginner/Medium/Advanced)
+document.querySelectorAll('.star-rating').forEach(ratingDiv => {
+    const stars = ratingDiv.querySelectorAll('.star');
+    const skill = ratingDiv.dataset.skill;
+    const labelId = skill.toLowerCase().replace('+', 'plus') + '-label';
+    const labelEl = document.getElementById(labelId);
+    
+    stars.forEach((star, idx) => {
+        star.addEventListener('click', () => {
+            const level = idx + 1;
+            stars.forEach((s, i) => s.classList.toggle('selected', i < level));
+            if (labelEl) {
+                labelEl.textContent = level > 0 ? `(${levelLabels[level]})` : '';
+            }
+        });
+    });
+});
+
+// Save Profile
+async function saveProfile() {
+    const name = document.getElementById('name').value;
+    const idNumber = document.getElementById('idNumber').value;
+    const email = document.getElementById('email').value;
+    const department = document.getElementById('department').value;
+    const degree = document.getElementById('degree').value;
+    const collegeName = document.getElementById('collegeName').value;
+    const phone = document.getElementById('phone').value;
+    const cgpa = parseFloat(document.getElementById('cgpa').value) || 0;
+    
+    const skills = {};
+    document.querySelectorAll('.star-rating').forEach(div => {
+        const skill = div.dataset.skill;
+        const selectedStars = div.querySelectorAll('.star.selected').length;
+        if (selectedStars > 0) {
+            skills[skill] = selectedStars;
+        }
+    });
+    
+    try {
+        const resp = await fetch('http://localhost:8080/api/student/profile', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ email, name, idNumber, department, degree, collegeName, phone, cgpa, skills })
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+            alert(data.error || 'Failed to save profile');
+            return;
+        }
+        alert('Profile saved successfully!');
+    } catch (e) {
+        alert('Error saving profile: ' + e.message);
+    }
+}
+
+// Check Eligibility
+async function checkEligibility() {
+    const cgpa = parseFloat(document.getElementById('cgpa').value);
+    if (!cgpa || cgpa <= 0) {
+        alert('Please enter your CGPA first');
+        return;
+    }
+    
+    const skillRatings = {};
+    document.querySelectorAll('.star-rating').forEach(div => {
+        const skill = div.dataset.skill;
+        const selectedStars = div.querySelectorAll('.star.selected').length;
+        if (selectedStars > 0) {
+            skillRatings[skill] = selectedStars;
+        }
+    });
+
+    const skillsParam = Object.entries(skillRatings)
+        .map(([k, v]) => `${encodeURIComponent(k)}:${v}`)
+        .join(',');
+
+    let eligible = [];
+    try {
+        const url = `http://localhost:8080/api/eligible?cgpa=${encodeURIComponent(cgpa)}&skills=${skillsParam}`;
+        const resp = await fetch(url);
+        if (resp.ok) {
+            eligible = await resp.json();
+        }
+    } catch (e) {
+        console.error(e);
+    }
+
+    const ul = document.getElementById('eligibleCompanies');
+    ul.innerHTML = '';
+    if (eligible.length === 0) {
+        ul.innerHTML = '<li class="list-group-item">No companies eligible. Update your CGPA and skills to see eligible companies.</li>';
+        return;
+    }
+    eligible.forEach(c => {
+        const li = document.createElement('li');
+        li.className = "list-group-item";
+        const skillsText = c.skills ? `<br><small class="text-muted">Required: ${c.skills}</small>` : '';
+        li.innerHTML = `<strong>${c.name}</strong>${skillsText}<br><a href="${c.link}" target="_blank" class="btn btn-sm btn-primary mt-2">Apply</a>`;
+        ul.appendChild(li);
+    });
+}
+</script>
+</body>
+</html>

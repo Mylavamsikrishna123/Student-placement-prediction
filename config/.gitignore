@@ -1,0 +1,50 @@
+# Build artifacts
+backend/target/
+*.class
+*.jar
+*.war
+*.ear
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*.iml
+.classpath
+.project
+.settings/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+logs/
+
+# Dependencies
+node_modules/
+.m2/
+
+# Environment
+.env
+.env.local
+*.local
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+~*
+
+# Maven
+.m2/
+maven-wrapper.jar
+.mvn/wrapper/maven-wrapper.jar
+
+# Build directories
+dist/
+build/
+out/
