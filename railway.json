@@ -4,7 +4,7 @@
     "builder": "DOCKERFILE"
   },
   "deploy": {
-    "startCommand": "java -jar backend/target/placement-backend-1.0.0-jar-with-dependencies.jar",
+    "buildCommand": "cd backend && mvn -q -DskipTests package",
     "restartPolicyMaxRetries": 5
   }
 }
