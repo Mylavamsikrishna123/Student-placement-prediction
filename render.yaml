@@ -1,0 +1,30 @@
+services:
+  - type: web
+    name: student-placement-system
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    
+    # Port configuration
+    ports:
+      - number: 8080
+        protocol: HTTP
+      - number: 5500
+        protocol: HTTP
+    
+    # Environment variables
+    envVars:
+      - key: DB_URL
+        value: jdbc:mysql://your-mysql-host:3306/JAVAPROJECT
+      - key: DB_USER
+        value: root
+      - key: DB_PASS
+        value: your-password
+      - key: PORT
+        value: 8080
+    
+    # Health check
+    healthCheckPath: /api/health
+    
+    # Scaling
+    numInstances: 1
+    startCommand: /app/start.sh
