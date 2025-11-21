@@ -9,7 +9,7 @@ DROP TABLE IF EXISTS students;
 DROP TABLE IF EXISTS skills;
 DROP TABLE IF EXISTS admin;
 
--- Students table
+-- Students table --
 CREATE TABLE students (
     student_id INT AUTO_INCREMENT PRIMARY KEY,
     student_name VARCHAR(100) NOT NULL,

@@ -1,5 +1,5 @@
 @echo off
-setlocal enabledelayexpansion
+setlocal enabledelayedexpansion
 
 REM ===================================================================
 REM   Student Placement System - Backend Startup Script

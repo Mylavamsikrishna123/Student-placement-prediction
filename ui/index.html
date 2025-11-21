@@ -4,130 +4,101 @@
 <meta charset="UTF-8">
 <title>Student Placement Prediction System</title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-<link rel="stylesheet" href="style.css">
+<!-- Keyframes must live in a <style> block; individual block sizes/positions/animations are inline as requested -->
 <style>
-body {
-    font-family: 'Poppins', sans-serif;
-    background: #f8f9fa;
-}
+  @keyframes float-fast {
+    0%   { transform: translate3d(0,0,0) rotate(0deg) scale(1); opacity:0.95; }
+    25%  { transform: translate3d(18px,-36px,0) rotate(20deg) scale(1.06); opacity:0.75; }
+    50%  { transform: translate3d(-28px,-8px,0) rotate(-14deg) scale(0.98); opacity:0.65; }
+    75%  { transform: translate3d(22px,28px,0) rotate(12deg) scale(1.04); opacity:0.82; }
+    100% { transform: translate3d(0,0,0) rotate(360deg) scale(1); opacity:0.95; }
+  }
 
-.navbar-brand {
-    font-weight: 600;
-}
+  @keyframes float-medium {
+    0%   { transform: translate3d(0,0,0) rotate(0deg) scale(1); opacity:0.92; }
+    50%  { transform: translate3d(0,-46px,0) rotate(12deg) scale(1.02); opacity:0.7; }
+    100% { transform: translate3d(0,0,0) rotate(0deg) scale(1); opacity:0.92; }
+  }
 
-.hero-section {
-    background: linear-gradient(135deg, #4e73df, #1cc88a);
-    color: white;
-    padding: 100px 0;
-    text-align: center;
-}
+  @keyframes drift {
+    0%   { transform: translate3d(-10px,0,0) rotate(0deg); opacity:0.9; }
+    50%  { transform: translate3d(20vw,-24px,0) rotate(90deg); opacity:0.7; }
+    100% { transform: translate3d(-10px,0,0) rotate(180deg); opacity:0.9; }
+  }
 
-.hero-section h1 {
-    font-size: 48px;
-    font-weight: 700;
-}
-
-.hero-section p {
-    font-size: 20px;
-    margin-top: 20px;
-}
-
-.btn-custom {
-    background-color: #fff;
-    color: #4e73df;
-    font-weight: 500;
-    transition: 0.3s;
-}
-
-.btn-custom:hover {
-    background-color: #e2e6ea;
-    color: #1cc88a;
-}
-
-.features {
-    padding: 60px 0;
-}
-
-.feature-card {
-    border-radius: 15px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-    padding: 30px;
-    text-align: center;
-    transition: 0.3s;
-    background-color: #fff;
-}
-
-.feature-card:hover {
-    transform: translateY(-10px);
-}
-
-footer {
-    background-color: #343a40;
-    color: white;
-    padding: 20px 0;
-    text-align: center;
-}
+  /* Minimal hero base styles (so inline block elements align to it) */
+  .hero-section { position: relative; overflow: hidden; padding:80px 0; min-height:60vh; }
+  .decor-container { position:absolute; inset:0; overflow:hidden; pointer-events:none; z-index:0; }
 </style>
+<link rel="stylesheet" href="style.css">
 </head>
-<body>
-<!-- Navbar -->
+<body style="padding-bottom:90px;">
+<!-- Navigation bar -->
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-<div class="container">
-    <a class="navbar-brand" href="index.html">Student Placement Prediction System</a>
-    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-        <span class="navbar-toggler-icon"></span>
-    </button>
-    <div class="collapse navbar-collapse" id="navbarNav">
-        <ul class="navbar-nav ms-auto">
-            <li class="nav-item"><a class="nav-link" href="admin_login.html">Admin Login</a></li>
-            <li class="nav-item"><a class="nav-link" href="user_login.html">Student Login</a></li>
-            <li class="nav-item"><a class="nav-link" href="user_register.html">Student Register</a></li>
-        </ul>
-    </div>
-</div>
+  <div class="container">
+      <a class="navbar-brand" href="index.html">Student Placement Prediction System</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+          <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+          <ul class="navbar-nav ms-auto">
+              <li class="nav-item"><a class="nav-link" href="admin_login.html">Admin Login</a></li>
+              <li class="nav-item"><a class="nav-link" href="user_login.html">Student Login</a></li>
+              <li class="nav-item"><a class="nav-link" href="user_register.html">Student Register</a></li>
+          </ul>
+      </div>
+  </div>
 </nav>
 
-<!-- Hero Section -->
-<section class="hero-section">
-    <div class="container">
-        <h1>Welcome to Student Placement Prediction System</h1>
-        <p>Predict your placement probability based on your CGPA and skills. Connect with top companies and boost your career!</p>
-        <a href="user_register.html" class="btn btn-custom btn-lg mt-3">Get Started</a>
-    </div>
+<!-- Hero section with many fast-moving inline-styled blocks -->
+<section class="hero-section" style="position:relative; overflow:hidden; padding:80px 0; min-height:60vh;">
+  <div class="decor-container" aria-hidden="true">
+    <!-- Increased number of blocks and faster animations; all visual block styles are inline below.
+         Colors for navbar/footer are NOT changed. -->
+
+    <!-- Row 1 -->
+    <div style="position:absolute; left:3%; top:6%; width:120px; height:120px; background:rgba(255,255,255,0.05); border-radius:18px; filter:blur(6px); transform:translateZ(0); animation:float-fast 6.6s ease-in-out infinite; animation-delay:0s;"></div>
+    <div style="position:absolute; left:12%; top:18%; width:60px; height:60px; background:rgba(255,255,255,0.045); border-radius:12px; transform:translateZ(0); animation:float-fast 5.2s ease-in-out infinite; animation-delay:0.6s;"></div>
+    <div style="position:absolute; left:22%; top:8%; width:36px; height:36px; background:rgba(255,255,255,0.06); border-radius:50%; transform:translateZ(0); animation:float-fast 4.4s linear infinite; animation-delay:1s;"></div>
+    <div style="position:absolute; left:30%; top:14%; width:140px; height:80px; background:rgba(255,255,255,0.03); border-radius:14px; transform:translateZ(0); animation:float-medium 8.5s ease-in-out infinite; animation-delay:0.3s;"></div>
+
+    <!-- Row 2 -->
+    <div style="position:absolute; left:38%; top:4%; width:90px; height:90px; background:rgba(255,255,255,0.05); border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,0.18); transform:translateZ(0); animation:drift 9s ease-in-out infinite; animation-delay:0.8s;"></div>
+    <div style="position:absolute; left:48%; top:20%; width:220px; height:40px; background:rgba(255,255,255,0.028); border-radius:20px; transform:translateZ(0); animation:float-fast 7.8s ease-in-out infinite; animation-delay:1.4s;"></div>
+    <div style="position:absolute; left:62%; top:6%; width:70px; height:70px; background:rgba(255,255,255,0.05); border-radius:50%; transform:translateZ(0); animation:float-fast 5.6s ease-in-out infinite; animation-delay:2.1s;"></div>
+
+    <!-- Row 3 -->
+    <div style="position:absolute; left:70%; top:18%; width:180px; height:120px; background:rgba(255,255,255,0.03); border-radius:20px; transform:translateZ(0); animation:float-medium 10s ease-in-out infinite; animation-delay:0.7s;"></div>
+    <div style="position:absolute; left:84%; top:8%; width:40px; height:140px; background:rgba(255,255,255,0.02); border-radius:10px; transform:translateZ(0); animation:drift 11s linear infinite; animation-delay:1.8s;"></div>
+
+    <!-- Lower clusters -->
+    <div style="position:absolute; left:6%; top:62%; width:220px; height:60px; background:rgba(255,255,255,0.02); border-radius:8px; transform:translateZ(0); animation:float-fast 8.2s ease-in-out infinite; animation-delay:2.5s;"></div>
+    <div style="position:absolute; left:24%; top:68%; width:100px; height:100px; background:rgba(255,255,255,0.03); border-radius:6px; transform:translateZ(0); animation:float-fast 6.2s ease-in-out infinite; animation-delay:1.2s;"></div>
+    <div style="position:absolute; left:42%; top:72%; width:56px; height:56px; background:rgba(255,255,255,0.055); border-radius:50%; transform:translateZ(0); animation:float-fast 4.8s linear infinite; animation-delay:3.1s;"></div>
+    <div style="position:absolute; left:52%; top:62%; width:140px; height:40px; background:rgba(255,255,255,0.025); border-radius:20px; transform:translateZ(0); animation:float-medium 12s ease-in-out infinite; animation-delay:2.9s;"></div>
+
+    <!-- Right clusters -->
+    <div style="position:absolute; left:66%; top:62%; width:92px; height:92px; background:rgba(255,255,255,0.035); border-radius:14px; transform:translateZ(0); animation:float-fast 6.8s ease-in-out infinite; animation-delay:2.2s;"></div>
+    <div style="position:absolute; left:78%; top:74%; width:160px; height:48px; background:rgba(255,255,255,0.02); border-radius:24px; transform:translateZ(0); animation:float-fast 9.6s ease-in-out infinite; animation-delay:3.6s;"></div>
+    <div style="position:absolute; left:90%; top:48%; width:72px; height:72px; background:rgba(255,255,255,0.04); border-radius:50%; transform:translateZ(0); animation:float-fast 5.4s ease-in-out infinite; animation-delay:1.6s;"></div>
+
+    <!-- Extra tiny accents for visual richness -->
+    <div style="position:absolute; left:15%; top:34%; width:18px; height:18px; background:rgba(255,255,255,0.08); border-radius:50%; transform:translateZ(0); animation:float-fast 3.8s linear infinite; animation-delay:0.9s;"></div>
+    <div style="position:absolute; left:58%; top:34%; width:14px; height:14px; background:rgba(255,255,255,0.09); border-radius:50%; transform:translateZ(0); animation:float-fast 3.6s linear infinite; animation-delay:2.0s;"></div>
+  </div>
+
+  <div class="container" style="position:relative; z-index:1;">
+    <h1 style="font-weight:700; color:inherit;">Welcome to Student Placement Prediction System</h1>
+    <p style="color:inherit;">Predict your placement probability based on your CGPA and skills. Connect with top companies and boost your career!</p>
+    <a href="user_register.html" class="btn btn-custom btn-lg hero-cta" style="z-index:2; position:relative;">Get Started</a>
+  </div>
 </section>
 
-<!-- Features Section -->
-<!-- <section class="features">
-<div class="container">
-    <h2 class="text-center mb-5">Key Features</h2>
-    <div class="row g-4">
-        <div class="col-md-4">
-            <div class="feature-card">
-                <h5>Student Dashboard</h5>
-                <p>Edit your profile, enter CGPA, select skills, and view eligible companies dynamically.</p>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="feature-card">
-                <h5>Admin Dashboard</h5>
-                <p>Add or edit companies, set CGPA and skill requirements, and manage placement drives efficiently.</p>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="feature-card">
-                <h5>Company Matching</h5>
-                <p>Students see only the companies for which they are eligible based on CGPA and skill ratings.</p>
-            </div>
-        </div>
-    </div>
-</div>
-</section> -->
-
-<!-- Footer -->
-<footer>
-    <div class="container">
-        &copy; 2025 Student Placement Prediction System. All Rights Reserved.
-    </div>
+<!-- Footer (fixed to bottom using inline CSS) - colors unchanged -->
+<footer style="position:fixed; left:0; bottom:0; width:100%; background:#212529; color:#fff; padding:12px 0; text-align:center; z-index:1030;">
+  <div class="container">
+    &copy; 2025 Student Placement Prediction System. All Rights Reserved.
+  </div>
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>

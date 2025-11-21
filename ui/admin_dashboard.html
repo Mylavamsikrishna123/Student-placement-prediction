@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Admin Dashboard | Placement Predictor</title>
+<title>Admin Dashboard</title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 <style>
@@ -37,7 +37,7 @@
                 <input type="number" id="companyCgpa" class="form-control" placeholder="Enter required CGPA" step="0.01" min="0" max="10" required>
             </div>
             <div class="mb-3">
-                <label>Required Skills (Select Skill Name and Level)</label>
+                <label>Required Skills</label>
                 <div id="skillsContainer">
                     <div class="skill-row">
                         <input type="text" placeholder="Skill Name (e.g., Java, Python)" class="skill-name form-control skill-name-input">
@@ -121,34 +121,35 @@
 let editModal;
 document.addEventListener('DOMContentLoaded', function() {
     editModal = new bootstrap.Modal(document.getElementById('editModal'));
+    loadCompanies();
 });
 
+// Add skill row
 document.getElementById('addSkill').addEventListener('click', function() {
     const container = document.getElementById('skillsContainer');
     const div = document.createElement('div');
     div.className = 'skill-row';
-    div.innerHTML = `
-        <input type="text" placeholder="Skill Name (e.g., Java, Python)" class="skill-name form-control skill-name-input">
-        <select class="skill-level form-control skill-level-select">
-            <option value="">Select Level</option>
-            <option value="1">Beginner ⭐</option>
-            <option value="2">Medium ⭐⭐</option>
-            <option value="3">Advanced ⭐⭐⭐</option>
-        </select>
-        <button type="button" class="btn btn-sm btn-danger remove-skill">Remove</button>
-    `;
+    div.innerHTML = '<input type="text" placeholder="Skill Name (e.g., Java, Python)" class="skill-name form-control skill-name-input">' +
+                    '<select class="skill-level form-control skill-level-select">' +
+                    '<option value="">Select Level</option>' +
+                    '<option value="1">Beginner ⭐</option>' +
+                    '<option value="2">Medium ⭐⭐</option>' +
+                    '<option value="3">Advanced ⭐⭐⭐</option>' +
+                    '</select>' +
+                    '<button type="button" class="btn btn-sm btn-danger remove-skill">Remove</button>';
     container.appendChild(div);
     
-    // Add remove functionality
     div.querySelector('.remove-skill').addEventListener('click', function() {
         div.remove();
+        updateRemoveButtons();
     });
+    updateRemoveButtons();
 });
 
-// Show remove button for first skill row if there are multiple
-document.getElementById('skillsContainer').addEventListener('input', function() {
-    const rows = this.querySelectorAll('.skill-row');
-    rows.forEach((row, idx) => {
+// Update remove buttons visibility
+function updateRemoveButtons() {
+    const rows = document.querySelectorAll('#skillsContainer .skill-row');
+    rows.forEach(function(row) {
         const removeBtn = row.querySelector('.remove-skill');
         if (rows.length > 1) {
             removeBtn.style.display = 'block';
@@ -156,8 +157,9 @@ document.getElementById('skillsContainer').addEventListener('input', function() 
             removeBtn.style.display = 'none';
         }
     });
-});
+}
 
+// Save company
 document.getElementById('companyForm').addEventListener('submit', async function(e){
     e.preventDefault();
     const name = document.getElementById('companyName').value;
@@ -168,7 +170,7 @@ document.getElementById('companyForm').addEventListener('submit', async function
     const skillNames = document.querySelectorAll('#skillsContainer .skill-name');
     const skillLevels = document.querySelectorAll('#skillsContainer .skill-level');
     
-    skillNames.forEach((sn, i) => {
+    skillNames.forEach(function(sn, i) {
         const skillName = sn.value.trim();
         const level = skillLevels[i].value;
         if (skillName && level) {
@@ -182,37 +184,36 @@ document.getElementById('companyForm').addEventListener('submit', async function
     }
     
     try {
-        const resp = await fetch('http://localhost:8080/api/companies', {
+        const response = await fetch('http://127.0.0.1:8080/api/companies', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ name, link, requiredCgpa: isFinite(cgpa) && cgpa >= 0 ? cgpa : null, skills })
+            body: JSON.stringify({ name: name, link: link, requiredCgpa: (isFinite(cgpa) && cgpa >= 0) ? cgpa : null, skills: skills })
         });
-        const data = await resp.json();
-        if (!resp.ok) {
+        
+        const data = await response.json();
+        if (!response.ok) {
             alert(data.error || 'Failed to save company');
             return;
         }
         alert('Company saved successfully!');
         await loadCompanies();
         this.reset();
-        // Reset skills container to one row
-        document.getElementById('skillsContainer').innerHTML = `
-            <div class="skill-row">
-                <input type="text" placeholder="Skill Name (e.g., Java, Python)" class="skill-name form-control skill-name-input">
-                <select class="skill-level form-control skill-level-select">
-                    <option value="">Select Level</option>
-                    <option value="1">Beginner ⭐</option>
-                    <option value="2">Medium ⭐⭐</option>
-                    <option value="3">Advanced ⭐⭐⭐</option>
-                </select>
-                <button type="button" class="btn btn-sm btn-danger remove-skill" style="display:none;">Remove</button>
-            </div>
-        `;
-    } catch (err) {
-        alert('Error saving company: ' + err.message);
+        document.getElementById('skillsContainer').innerHTML = '<div class="skill-row">' +
+            '<input type="text" placeholder="Skill Name (e.g., Java, Python)" class="skill-name form-control skill-name-input">' +
+            '<select class="skill-level form-control skill-level-select">' +
+            '<option value="">Select Level</option>' +
+            '<option value="1">Beginner ⭐</option>' +
+            '<option value="2">Medium ⭐⭐</option>' +
+            '<option value="3">Advanced ⭐⭐⭐</option>' +
+            '</select>' +
+            '<button type="button" class="btn btn-sm btn-danger remove-skill" style="display:none;">Remove</button>' +
+            '</div>';
+    } catch (error) {
+        alert('Error saving company: ' + error.message);
     }
 });
 
+// Edit company
 async function editCompany(company) {
     document.getElementById('editCompanyId').value = company.id;
     document.getElementById('editCompanyName').value = company.name;
@@ -223,25 +224,23 @@ async function editCompany(company) {
     skillsContainer.innerHTML = '';
     
     if (company.skills) {
-        const skillMatches = company.skills.match(/(\w+)\((\d+)★?\)/g) || [];
-        skillMatches.forEach((match, idx) => {
-            const skillMatch = match.match(/(\w+)\((\d+)/);
+        const skillMatches = company.skills.match(/([^()]+)\((\d+)★?\)/g) || [];
+        skillMatches.forEach(function(match) {
+            const skillMatch = match.match(/([^()]+)\((\d+)/);
             if (skillMatch) {
-                const skillName = skillMatch[1];
+                const skillName = skillMatch[1].trim();
                 const skillLevel = skillMatch[2];
                 
                 const div = document.createElement('div');
                 div.className = 'skill-row';
-                div.innerHTML = `
-                    <input type="text" placeholder="Skill Name" class="skill-name form-control skill-name-input" value="${skillName}">
-                    <select class="skill-level form-control skill-level-select">
-                        <option value="">Select Level</option>
-                        <option value="1" ${skillLevel === '1' ? 'selected' : ''}>Beginner ⭐</option>
-                        <option value="2" ${skillLevel === '2' ? 'selected' : ''}>Medium ⭐⭐</option>
-                        <option value="3" ${skillLevel === '3' ? 'selected' : ''}>Advanced ⭐⭐⭐</option>
-                    </select>
-                    <button type="button" class="btn btn-sm btn-danger remove-skill" ${skillMatches.length > 1 ? '' : 'style="display:none;"'}>Remove</button>
-                `;
+                div.innerHTML = '<input type="text" placeholder="Skill Name" class="skill-name form-control skill-name-input" value="' + skillName + '">' +
+                    '<select class="skill-level form-control skill-level-select">' +
+                    '<option value="">Select Level</option>' +
+                    '<option value="1" ' + (skillLevel === '1' ? 'selected' : '') + '>Beginner ⭐</option>' +
+                    '<option value="2" ' + (skillLevel === '2' ? 'selected' : '') + '>Medium ⭐⭐</option>' +
+                    '<option value="3" ' + (skillLevel === '3' ? 'selected' : '') + '>Advanced ⭐⭐⭐</option>' +
+                    '</select>' +
+                    '<button type="button" class="btn btn-sm btn-danger remove-skill">Remove</button>';
                 skillsContainer.appendChild(div);
                 
                 div.querySelector('.remove-skill').addEventListener('click', function() {
@@ -252,50 +251,51 @@ async function editCompany(company) {
     }
     
     if (skillsContainer.children.length === 0) {
-        skillsContainer.innerHTML = `
-            <div class="skill-row">
-                <input type="text" placeholder="Skill Name" class="skill-name form-control skill-name-input">
-                <select class="skill-level form-control skill-level-select">
-                    <option value="">Select Level</option>
-                    <option value="1">Beginner ⭐</option>
-                    <option value="2">Medium ⭐⭐</option>
-                    <option value="3">Advanced ⭐⭐⭐</option>
-                </select>
-                <button type="button" class="btn btn-sm btn-danger remove-skill" style="display:none;">Remove</button>
-            </div>
-        `;
+        skillsContainer.innerHTML = '<div class="skill-row">' +
+            '<input type="text" placeholder="Skill Name" class="skill-name form-control skill-name-input">' +
+            '<select class="skill-level form-control skill-level-select">' +
+            '<option value="">Select Level</option>' +
+            '<option value="1">Beginner ⭐</option>' +
+            '<option value="2">Medium ⭐⭐</option>' +
+            '<option value="3">Advanced ⭐⭐⭐</option>' +
+            '</select>' +
+            '<button type="button" class="btn btn-sm btn-danger remove-skill" style="display:none;">Remove</button>' +
+            '</div>';
     }
     
     editModal.show();
 }
 
+// Delete company
 async function deleteCompany(companyId) {
     if (!confirm('Are you sure you want to delete this company?')) return;
     
     try {
-        const resp = await fetch(`http://localhost:8080/api/companies/${companyId}`, {
+        const response = await fetch('http://127.0.0.1:8080/api/companies/' + companyId, {
             method: 'DELETE',
             headers: {'Content-Type': 'application/json'}
         });
-        const data = await resp.json();
-        if (!resp.ok) {
+        
+        const data = await response.json();
+        if (!response.ok) {
             alert(data.error || 'Failed to delete company');
             return;
         }
         alert('Company deleted successfully!');
         await loadCompanies();
-    } catch (err) {
-        alert('Error deleting company: ' + err.message);
+    } catch (error) {
+        alert('Error deleting company: ' + error.message);
     }
 }
 
+// Load companies
 async function loadCompanies(){
     const list = document.getElementById('companyList');
     list.innerHTML = '<li class="list-group-item">Loading...</li>';
     try {
-        const resp = await fetch('http://localhost:8080/api/companies');
-        if (!resp.ok) throw new Error('Failed to load');
-        const companies = await resp.json();
+        const response = await fetch('http://127.0.0.1:8080/api/companies');
+        if (!response.ok) throw new Error('Failed to load');
+        const companies = await response.json();
         
         list.innerHTML = '';
         if (companies.length === 0) {
@@ -303,26 +303,45 @@ async function loadCompanies(){
             return;
         }
         
-        companies.forEach((c) => {
+        companies.forEach(function(company) {
             const li = document.createElement('li');
             li.className = "list-group-item";
-            const skillsText = c.skills ? c.skills : 'No skills specified';
-            li.innerHTML = `
-                <strong>${c.name}</strong><br>
-                <strong>Required Skills:</strong> ${skillsText}<br>
-                <a href="${c.link}" target="_blank" class="btn btn-sm btn-primary mt-2">Application Link</a>
-                <button onclick='editCompany(${JSON.stringify(c).replace(/'/g, "&apos;")})' class="btn btn-sm btn-warning mt-2">Edit</button>
-                <button onclick='deleteCompany(${c.id})' class="btn btn-sm btn-danger mt-2">Delete</button>
-            `;
+            const skillsText = company.skills ? company.skills : 'No skills specified';
+
+            const nameEl = document.createElement('strong');
+            nameEl.textContent = company.name;
+            li.appendChild(nameEl);
+            li.appendChild(document.createElement('br'));
+
+            const skillsEl = document.createElement('div');
+            skillsEl.innerHTML = '<strong>Required Skills:</strong> ' + skillsText + '<br>';
+            li.appendChild(skillsEl);
+
+            const linkBtn = document.createElement('a');
+            linkBtn.href = company.link || '#';
+            linkBtn.target = '_blank';
+            linkBtn.className = 'btn btn-sm btn-primary mt-2';
+            linkBtn.textContent = 'Application Link';
+            li.appendChild(linkBtn);
+
+            const editBtn = document.createElement('button');
+            editBtn.className = 'btn btn-sm btn-warning mt-2 ms-2';
+            editBtn.textContent = 'Edit';
+            editBtn.addEventListener('click', function() { editCompany(company); });
+            li.appendChild(editBtn);
+
+            const delBtn = document.createElement('button');
+            delBtn.className = 'btn btn-sm btn-danger mt-2 ms-2';
+            delBtn.textContent = 'Delete';
+            delBtn.addEventListener('click', function() { deleteCompany(company.id); });
+            li.appendChild(delBtn);
+
             list.appendChild(li);
         });
-    } catch (e) {
+    } catch (error) {
         list.innerHTML = '<li class="list-group-item text-danger">Error loading companies</li>';
     }
 }
-
-// Initial load
-loadCompanies();
 
 // Save edit
 document.getElementById('saveEditBtn').addEventListener('click', async function() {
@@ -335,7 +354,7 @@ document.getElementById('saveEditBtn').addEventListener('click', async function(
     const skillNames = document.querySelectorAll('#editSkillsContainer .skill-name');
     const skillLevels = document.querySelectorAll('#editSkillsContainer .skill-level');
     
-    skillNames.forEach((sn, i) => {
+    skillNames.forEach(function(sn, i) {
         const skillName = sn.value.trim();
         const level = skillLevels[i].value;
         if (skillName && level) {
@@ -349,39 +368,38 @@ document.getElementById('saveEditBtn').addEventListener('click', async function(
     }
     
     try {
-        const resp = await fetch(`http://localhost:8080/api/companies/${companyId}`, {
+        const response = await fetch('http://127.0.0.1:8080/api/companies/' + companyId, {
             method: 'PUT',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ name, link, requiredCgpa: isFinite(cgpa) && cgpa >= 0 ? cgpa : null, skills })
+            body: JSON.stringify({ name: name, link: link, requiredCgpa: (isFinite(cgpa) && cgpa >= 0) ? cgpa : null, skills: skills })
         });
-        const data = await resp.json();
-        if (!resp.ok) {
+        
+        const data = await response.json();
+        if (!response.ok) {
             alert(data.error || 'Failed to update company');
             return;
         }
         alert('Company updated successfully!');
         editModal.hide();
         await loadCompanies();
-    } catch (err) {
-        alert('Error updating company: ' + err.message);
+    } catch (error) {
+        alert('Error updating company: ' + error.message);
     }
 });
 
-// Add edit skill handlers
+// Add edit skill
 document.getElementById('editAddSkill').addEventListener('click', function() {
     const container = document.getElementById('editSkillsContainer');
     const div = document.createElement('div');
     div.className = 'skill-row';
-    div.innerHTML = `
-        <input type="text" placeholder="Skill Name" class="skill-name form-control skill-name-input">
-        <select class="skill-level form-control skill-level-select">
-            <option value="">Select Level</option>
-            <option value="1">Beginner ⭐</option>
-            <option value="2">Medium ⭐⭐</option>
-            <option value="3">Advanced ⭐⭐⭐</option>
-        </select>
-        <button type="button" class="btn btn-sm btn-danger remove-skill">Remove</button>
-    `;
+    div.innerHTML = '<input type="text" placeholder="Skill Name" class="skill-name form-control skill-name-input">' +
+        '<select class="skill-level form-control skill-level-select">' +
+        '<option value="">Select Level</option>' +
+        '<option value="1">Beginner ⭐</option>' +
+        '<option value="2">Medium ⭐⭐</option>' +
+        '<option value="3">Advanced ⭐⭐⭐</option>' +
+        '</select>' +
+        '<button type="button" class="btn btn-sm btn-danger remove-skill">Remove</button>';
     container.appendChild(div);
     
     div.querySelector('.remove-skill').addEventListener('click', function() {

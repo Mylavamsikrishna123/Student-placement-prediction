@@ -2,15 +2,56 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Student Dashboard | Placement Predictor</title>
+<title>Student Dashboard</title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 <style>
-.card { border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); margin-bottom:20px; }
-.star-rating { display:flex; gap:5px; cursor:pointer; }
-.star { font-size:24px; color:#ccc; }
-.star.selected { color: gold; }
+/* Card and layout */
+.card { border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); margin-bottom:20px; transform-origin: center bottom; }
+.container-hero { background: linear-gradient(120deg,#4b6cb7 0%,#182848 100%); color: #fff; padding: 48px 0; margin-bottom: 20px; }
+.hero-inner { max-width:1100px; margin:0 auto; display:flex; align-items:center; gap:24px; padding: 0 16px; }
+.hero-copy { flex:1; }
+.hero-title { font-size:32px; font-weight:700; margin:0 0 8px; }
+.hero-sub { margin:0 0 16px; color:rgba(255,255,255,0.9); }
+.hero-cta { display:inline-block; }
+
+/* Star rating */
+.star-rating { display:flex; gap:8px; cursor:pointer; }
+.star { font-size:24px; color:#ccc; transition: transform 150ms ease, color 200ms ease; display:inline-block; }
+.star.selected { color: gold; transform: scale(1.15); }
+.star.pop { animation: star-pop 300ms ease; }
 .skill-level-label { font-size: 12px; color: #666; margin-left: 10px; }
+
+/* Buttons */
+.btn-custom { background: linear-gradient(90deg,#6dd5ed,#2193b0); color:#fff; border: none; }
+.btn-custom:hover { opacity:0.95; }
+
+/* Animations */
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+@keyframes star-pop {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.35); }
+    100% { transform: scale(1.15); }
+}
+.animate { animation: fadeInUp 480ms ease both; }
+
+/* Responsive tweaks */
+@media (max-width: 768px) {
+    .hero-inner { flex-direction: column; text-align:center; }
+    .hero-title { font-size:24px; }
+}
+
+/* Profile layout: place form fields and skills side-by-side */
+.profile-flex { display:flex; gap:28px; align-items:flex-start; }
+.profile-left { flex: 1 1 60%; }
+.profile-right { flex: 0 0 360px; max-width: 40%; }
+@media (max-width: 992px) {
+    .profile-flex { flex-direction: column; }
+    .profile-right { max-width: 100%; width:100%; }
+}
 </style>
 </head>
 <body>
@@ -21,49 +62,75 @@
 </div>
 </nav>
 
+<!-- Hero / Cover Section -->
+<div class="container-hero">
+    <div class="hero-inner">
+        <div class="hero-copy">
+            <h1 class="hero-title">Welcome to your Student Dashboard</h1>
+            <p class="hero-sub">Manage your profile, set your skills and discover companies that match your profile. Keep your details up to date to get the best matches.</p>
+            <!-- <a class="btn btn-custom hero-cta" href="#studentForm">Edit Profile</a> -->
+        </div>
+        <div class="hero-visual">
+            <svg width="140" height="140" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+                <circle cx="12" cy="8" r="3" fill="rgba(255,255,255,0.95)" />
+                <path d="M4 20c0-3.3 2.7-6 6-6h4c3.3 0 6 2.7 6 6" stroke="rgba(255,255,255,0.85)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </div>
+    </div>
+</div>
+
 <div class="container mt-4">
     <div class="card p-4">
         <h4>Student Profile</h4>
         <form id="studentForm">
-            <div class="mb-3">
-                <label>Name</label>
-                <input type="text" id="name" class="form-control" placeholder="Enter Name">
-            </div>
-            <div class="mb-3">
-                <label>ID Number</label>
-                <input type="text" id="idNumber" class="form-control" placeholder="Enter ID Number">
-            </div>
-            <div class="mb-3">
-                <label>Email</label>
-                <input type="email" id="email" class="form-control" placeholder="Enter Email" readonly>
-            </div>
-            <div class="mb-3">
-                <label>Department</label>
-                <input type="text" id="department" class="form-control" placeholder="Enter Department">
-            </div>
-            <div class="mb-3">
-                <label>Degree</label>
-                <select id="degree" class="form-control">
-                    <option value="">Select Degree</option>
-                    <option value="B.Tech">B.Tech</option>
-                    <option value="M.Tech">M.Tech</option>
-                </select>
-            </div>
-            <div class="mb-3">
-                <label>College Name</label>
-                <input type="text" id="collegeName" class="form-control" placeholder="Enter College Name">
-            </div>
-            <div class="mb-3">
-                <label>Phone Number</label>
-                <input type="tel" id="phone" class="form-control" placeholder="Enter Phone Number">
-            </div>
-            <div class="mb-3">
-                <label>Overall CGPA</label>
-                <input type="number" id="cgpa" min="0" max="10" step="0.01" class="form-control" placeholder="Enter CGPA">
-            </div>
+            <div class="profile-flex">
+                <div class="profile-left">
+                    <div class="mb-3">
+                        <label>Name</label>
+                        <input type="text" id="name" class="form-control" placeholder="Enter Name">
+                    </div>
+                    <div class="mb-3">
+                        <label>ID Number</label>
+                        <input type="text" id="idNumber" class="form-control" placeholder="Enter ID Number">
+                    </div>
+                    <div class="mb-3">
+                        <label>Email</label>
+                        <input type="email" id="email" class="form-control" placeholder="Enter Email" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label>Department</label>
+                        <input type="text" id="department" class="form-control" placeholder="Enter Department">
+                    </div>
+                    <div class="mb-3">
+                        <label>Degree</label>
+                        <select id="degree" class="form-control">
+                            <option value="">Select Degree</option>
+                            <option value="B.Tech">B.Tech</option>
+                            <option value="M.Tech">M.Tech</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label>College Name</label>
+                        <input type="text" id="collegeName" class="form-control" placeholder="Enter College Name">
+                    </div>
+                    <div class="mb-3">
+                        <label>Phone Number</label>
+                        <input type="tel" id="phone" class="form-control" placeholder="Enter Phone Number">
+                    </div>
+                    <div class="mb-3">
+                        <label>Overall CGPA</label>
+                        <input type="number" id="cgpa" min="0" max="10" step="0.01" class="form-control" placeholder="Enter CGPA">
+                    </div>
 
-            <h5 class="mt-3">Skills (Select Level: Beginner⭐, Medium⭐⭐, Advanced⭐⭐⭐)</h5>
-            <div id="skillsContainer">
+                    <div class="mt-3">
+                        <button type="button" class="btn btn-custom" onclick="saveProfile()">Save Profile</button>
+                        <button type="button" class="btn btn-secondary ms-2" onclick="checkEligibility()">Show Eligible Companies</button>
+                    </div>
+                </div>
+
+                <div class="profile-right">
+                    <h5 class="mt-0">Skills</h5>
+                    <div id="skillsContainer">
                 <div class="mb-3">
                     <label>Java <span class="skill-level-label" id="java-label"></span></label>
                     <div class="star-rating" data-skill="Java">
@@ -121,8 +188,8 @@
                     </div>
                 </div>
             </div>
-            <button type="button" class="btn btn-custom mt-3" onclick="saveProfile()">Save Profile</button>
-            <button type="button" class="btn btn-secondary mt-3 ms-2" onclick="checkEligibility()">Show Eligible Companies</button>
+                </div>
+            </div>
         </form>
     </div>
 
@@ -133,34 +200,89 @@
 </div>
 
 <script>
-// Load email from sessionStorage
+// Get email from session storage
 const studentEmail = sessionStorage.getItem('studentEmail');
 if (studentEmail) {
     document.getElementById('email').value = studentEmail;
 }
 
-// Skill level labels
+// Load existing profile data
+async function loadProfile() {
+    if (!studentEmail) return;
+    
+    try {
+        const response = await fetch('http://127.0.0.1:8080/api/student/profile?email=' + encodeURIComponent(studentEmail));
+        if (response.ok) {
+            const profile = await response.json();
+            
+            // Fill form fields
+            if (profile.name) document.getElementById('name').value = profile.name;
+            if (profile.idNumber) document.getElementById('idNumber').value = profile.idNumber;
+            if (profile.department) document.getElementById('department').value = profile.department;
+            if (profile.degree) document.getElementById('degree').value = profile.degree;
+            if (profile.collegeName) document.getElementById('collegeName').value = profile.collegeName;
+            if (profile.phone) document.getElementById('phone').value = profile.phone;
+            if (profile.cgpa) document.getElementById('cgpa').value = profile.cgpa;
+            
+            // Load skills
+            if (profile.skills) {
+                Object.keys(profile.skills).forEach(function(skillName) {
+                    const level = profile.skills[skillName];
+                    const ratingDiv = document.querySelector('.star-rating[data-skill="' + skillName + '"]');
+                    if (ratingDiv) {
+                        const stars = ratingDiv.querySelectorAll('.star');
+                        const labelId = skillName.toLowerCase().replace('+', 'plus') + '-label';
+                        const labelEl = document.getElementById(labelId);
+                        
+                        stars.forEach(function(star, idx) {
+                            if (idx < level) {
+                                star.classList.add('selected');
+                            }
+                        });
+                        
+                        if (labelEl) {
+                            labelEl.textContent = '(' + levelLabels[level] + ')';
+                        }
+                    }
+                });
+            }
+        }
+    } catch (error) {
+        console.error('Error loading profile:', error);
+    }
+}
+
+// Load profile when page loads
+loadProfile();
+
+// Labels for skill levels
 const levelLabels = ['', 'Beginner', 'Medium', 'Advanced'];
 
-// Star Rating (3 stars: Beginner/Medium/Advanced)
-document.querySelectorAll('.star-rating').forEach(ratingDiv => {
+// Setup star rating for each skill
+document.querySelectorAll('.star-rating').forEach(function(ratingDiv) {
     const stars = ratingDiv.querySelectorAll('.star');
     const skill = ratingDiv.dataset.skill;
     const labelId = skill.toLowerCase().replace('+', 'plus') + '-label';
     const labelEl = document.getElementById(labelId);
     
-    stars.forEach((star, idx) => {
-        star.addEventListener('click', () => {
+    stars.forEach(function(star, idx) {
+        star.addEventListener('click', function() {
             const level = idx + 1;
-            stars.forEach((s, i) => s.classList.toggle('selected', i < level));
+            stars.forEach(function(s, i) {
+                if (i < level) {
+                    s.classList.add('selected');
+                } else {
+                    s.classList.remove('selected');
+                }
+            });
             if (labelEl) {
-                labelEl.textContent = level > 0 ? `(${levelLabels[level]})` : '';
+                labelEl.textContent = level > 0 ? '(' + levelLabels[level] + ')' : '';
             }
         });
     });
 });
 
-// Save Profile
+// Save profile function
 async function saveProfile() {
     const name = document.getElementById('name').value;
     const idNumber = document.getElementById('idNumber').value;
@@ -172,7 +294,7 @@ async function saveProfile() {
     const cgpa = parseFloat(document.getElementById('cgpa').value) || 0;
     
     const skills = {};
-    document.querySelectorAll('.star-rating').forEach(div => {
+    document.querySelectorAll('.star-rating').forEach(function(div) {
         const skill = div.dataset.skill;
         const selectedStars = div.querySelectorAll('.star.selected').length;
         if (selectedStars > 0) {
@@ -181,23 +303,40 @@ async function saveProfile() {
     });
     
     try {
-        const resp = await fetch('http://localhost:8080/api/student/profile', {
+        const response = await fetch('http://127.0.0.1:8080/api/student/profile', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ email, name, idNumber, department, degree, collegeName, phone, cgpa, skills })
+            body: JSON.stringify({ email: email, name: name, idNumber: idNumber, department: department, degree: degree, collegeName: collegeName, phone: phone, cgpa: cgpa, skills: skills })
         });
-        const data = await resp.json();
-        if (!resp.ok) {
-            alert(data.error || 'Failed to save profile');
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            let errorMsg = 'Failed to save profile';
+            try {
+                const errorData = JSON.parse(errorText);
+                errorMsg = errorData.error || errorMsg;
+            } catch (e) {
+                errorMsg = errorText || errorMsg;
+            }
+            alert(errorMsg);
             return;
         }
+        
+        const data = await response.json();
         alert('Profile saved successfully!');
-    } catch (e) {
-        alert('Error saving profile: ' + e.message);
+        // Reload profile to show updated data
+        loadProfile();
+    } catch (error) {
+        console.error('Save profile error:', error);
+        if (error.message && error.message.includes('fetch')) {
+            alert('Cannot connect to server. Please make sure the backend server is running on port 8080.');
+        } else {
+            alert('Error saving profile: ' + error.message);
+        }
     }
 }
 
-// Check Eligibility
+// Check eligibility function
 async function checkEligibility() {
     const cgpa = parseFloat(document.getElementById('cgpa').value);
     if (!cgpa || cgpa <= 0) {
@@ -206,7 +345,7 @@ async function checkEligibility() {
     }
     
     const skillRatings = {};
-    document.querySelectorAll('.star-rating').forEach(div => {
+    document.querySelectorAll('.star-rating').forEach(function(div) {
         const skill = div.dataset.skill;
         const selectedStars = div.querySelectorAll('.star.selected').length;
         if (selectedStars > 0) {
@@ -215,18 +354,20 @@ async function checkEligibility() {
     });
 
     const skillsParam = Object.entries(skillRatings)
-        .map(([k, v]) => `${encodeURIComponent(k)}:${v}`)
+        .map(function(entry) {
+            return encodeURIComponent(entry[0]) + ':' + entry[1];
+        })
         .join(',');
 
     let eligible = [];
     try {
-        const url = `http://localhost:8080/api/eligible?cgpa=${encodeURIComponent(cgpa)}&skills=${skillsParam}`;
-        const resp = await fetch(url);
-        if (resp.ok) {
-            eligible = await resp.json();
+        const url = 'http://127.0.0.1:8080/api/eligible?cgpa=' + encodeURIComponent(cgpa) + '&skills=' + skillsParam;
+        const response = await fetch(url);
+        if (response.ok) {
+            eligible = await response.json();
         }
-    } catch (e) {
-        console.error(e);
+    } catch (error) {
+        console.error(error);
     }
 
     const ul = document.getElementById('eligibleCompanies');
@@ -235,14 +376,41 @@ async function checkEligibility() {
         ul.innerHTML = '<li class="list-group-item">No companies eligible. Update your CGPA and skills to see eligible companies.</li>';
         return;
     }
-    eligible.forEach(c => {
+    eligible.forEach(function(company) {
         const li = document.createElement('li');
         li.className = "list-group-item";
-        const skillsText = c.skills ? `<br><small class="text-muted">Required: ${c.skills}</small>` : '';
-        li.innerHTML = `<strong>${c.name}</strong>${skillsText}<br><a href="${c.link}" target="_blank" class="btn btn-sm btn-primary mt-2">Apply</a>`;
+        const skillsText = company.skills ? '<br><small class="text-muted">Required: ' + company.skills + '</small>' : '';
+        li.innerHTML = '<strong>' + company.name + '</strong>' + skillsText + '<br><a href="' + company.link + '" target="_blank" class="btn btn-sm btn-primary mt-2">Apply</a>';
         ul.appendChild(li);
     });
 }
+
+    // Page animations and interactions
+    document.addEventListener('DOMContentLoaded', function() {
+        // Stagger card entrance
+        document.querySelectorAll('.card').forEach(function(el, idx) {
+            setTimeout(function() { el.classList.add('animate'); }, idx * 120);
+        });
+
+        // Pop animation for stars when clicked (visual feedback in addition to selection)
+        document.querySelectorAll('.star').forEach(function(star) {
+            star.addEventListener('click', function() {
+                star.classList.add('pop');
+                setTimeout(function() { star.classList.remove('pop'); }, 350);
+            });
+        });
+
+        // Smooth scroll for internal anchors (hero CTA -> form)
+        document.querySelectorAll('a[href^="#"]').forEach(function(a) {
+            a.addEventListener('click', function(e) {
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    e.preventDefault();
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
+        });
+    });
 </script>
 </body>
 </html>
