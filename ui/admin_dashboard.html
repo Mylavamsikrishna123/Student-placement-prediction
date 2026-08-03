@@ -16,7 +16,12 @@
 <nav class="navbar navbar-dark bg-dark">
 <div class="container-fluid">
     <a class="navbar-brand" href="index.html">Admin Dashboard</a>
-    <a href="admin_login.html" class="btn btn-outline-light">Logout</a>
+    <div class="d-flex align-items-center gap-3">
+      <span class="text-white" id="navAdminEmail"></span>
+      <button onclick="logout()" class="btn btn-outline-light btn-sm">
+        <i class="bi bi-box-arrow-right"></i> Logout
+      </button>
+    </div>
 </div>
 </nav>
 
@@ -63,7 +68,7 @@
             • If student CGPA ≥ 9.0: Show all companies<br>
             • If student CGPA ≥ 7.0: Show companies where student meets all required skill levels
         </div>
-        <ul class="list-group" id="companyList"></ul>
+        <ul class="list-group" id="companyList" style="max-height: 500px; overflow-y: auto; overflow-x: hidden;"></ul>
     </div>
 </div>
 
@@ -116,12 +121,186 @@
     </div>
 </div>
 
+<!-- Eligibility Tracking Section -->
+<div class="container mt-4 mb-5">
+    <div class="card p-4">
+        <h4>Student Eligibility Tracking</h4>
+        <div class="row mb-3">
+            <div class="col-md-3">
+                <label>Filter by Student</label>
+                <input type="text" id="filterStudent" class="form-control" placeholder="Student name or email">
+            </div>
+            <div class="col-md-3">
+                <label>Filter by Company</label>
+                <select id="filterCompany" class="form-control">
+                    <option value="">All Companies</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label>Filter by Eligibility</label>
+                <select id="filterEligibility" class="form-control">
+                    <option value="">All Status</option>
+                    <option value="true">Eligible</option>
+                    <option value="false">Not Eligible</option>
+                </select>
+            </div>
+            <div class="col-md-3 d-flex align-items-end gap-2">
+                <button class="btn btn-custom" onclick="loadEligibilityResults()">Filter</button>
+                <button class="btn btn-success" onclick="exportToExcel()">Export to Excel</button>
+            </div>
+        </div>
+        <div style="max-height: 500px; overflow-y: auto; overflow-x: auto;">
+            <table class="table table-striped table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Student Name</th>
+                        <th>Roll Number</th>
+                        <th>Department</th>
+                        <th>Company Name</th>
+                        <th>Eligibility</th>
+                        <th>Reason</th>
+                        <th>Date Tested</th>
+                    </tr>
+                </thead>
+                <tbody id="eligibilityTableBody">
+                    <tr><td colspan="7" class="text-center text-muted">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
-let editModal;
+// Eligibility tracking functions
+let allEligibilityData = [];
+
+async function loadEligibilityResults() {
+    try {
+        const studentFilter = document.getElementById('filterStudent').value;
+        const companyFilter = document.getElementById('filterCompany').value;
+        const eligibilityFilter = document.getElementById('filterEligibility').value;
+        
+        let url = 'http://localhost:8080/api/eligibility/results';
+        const params = [];
+        if (companyFilter) params.push('companyId=' + companyFilter);
+        if (eligibilityFilter !== '') params.push('eligible=' + (eligibilityFilter === 'true'));
+        if (params.length > 0) url += '?' + params.join('&');
+        
+        console.log('Fetching eligibility from:', url);
+        const response = await fetch(url);
+        if (!response.ok) throw new Error('Failed to load eligibility results');
+        
+        let results = await response.json();
+        console.log('Eligibility results:', results);
+        
+        // Apply client-side student filter
+        if (studentFilter) {
+            results = results.filter(r => 
+                r.student_name.toLowerCase().includes(studentFilter.toLowerCase()) ||
+                (r.student_email && r.student_email.toLowerCase().includes(studentFilter.toLowerCase()))
+            );
+        }
+        
+        allEligibilityData = results;
+        displayEligibilityResults(results);
+    } catch (error) {
+        console.error('Error loading eligibility results:', error);
+        document.getElementById('eligibilityTableBody').innerHTML = '<tr><td colspan="7" class="text-danger">Error loading data</td></tr>';
+    }
+}
+
+function displayEligibilityResults(results) {
+    const tbody = document.getElementById('eligibilityTableBody');
+    tbody.innerHTML = '';
+    
+    if (results.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No eligibility records found</td></tr>';
+        return;
+    }
+    
+    results.forEach(function(result) {
+        const tr = document.createElement('tr');
+        const statusBadge = result.is_eligible ? '<span class="badge bg-success">Eligible</span>' : '<span class="badge bg-danger">Not Eligible</span>';
+        const reason = result.reason_if_not_eligible || '-';
+        const dateStr = result.timestamp ? new Date(result.timestamp).toLocaleDateString() : 'N/A';
+        
+        tr.innerHTML = '<td>' + result.student_name + '</td>' +
+                      '<td>' + (result.student_idnumber || 'N/A') + '</td>' +
+                      '<td>' + (result.student_department || 'N/A') + '</td>' +
+                      '<td>' + result.company_name + '</td>' +
+                      '<td>' + statusBadge + '</td>' +
+                      '<td>' + reason + '</td>' +
+                      '<td>' + dateStr + '</td>';
+        tbody.appendChild(tr);
+    });
+}
+
+async function loadCompaniesForFilter() {
+    try {
+        const response = await fetch('http://localhost:8080/api/companies');
+        if (!response.ok) return;
+        
+        const companies = await response.json();
+        const select = document.getElementById('filterCompany');
+        companies.forEach(function(company) {
+            const option = document.createElement('option');
+            option.value = company.id;
+            option.textContent = company.name;
+            select.appendChild(option);
+        });
+    } catch (error) {
+        console.error('Error loading companies for filter:', error);
+    }
+}
+
+function exportToExcel() {
+    if (allEligibilityData.length === 0) {
+        alert('No data to export. Please load eligibility results first.');
+        return;
+    }
+    
+    try {
+        const exportData = allEligibilityData.map(r => ({
+            'Student Name': r.student_name,
+            'Roll Number': r.student_idnumber || 'N/A',
+            'Department': r.student_department || 'N/A',
+            'Company Name': r.company_name,
+            'Eligibility': r.is_eligible ? 'Yes' : 'No',
+            'Reason': r.reason_if_not_eligible || '-',
+            'Date Tested': r.timestamp ? new Date(r.timestamp).toLocaleDateString() : 'N/A'
+        }));
+        
+        const ws = XLSX.utils.json_to_sheet(exportData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Eligibility');
+        
+        // Set column widths
+        ws['!cols'] = [
+            { wch: 20 },
+            { wch: 15 },
+            { wch: 15 },
+            { wch: 20 },
+            { wch: 12 },
+            { wch: 25 },
+            { wch: 15 }
+        ];
+        
+        XLSX.writeFile(wb, 'eligibility_results_' + new Date().toISOString().split('T')[0] + '.xlsx');
+        alert('Excel file exported successfully!');
+    } catch (error) {
+        console.error('Excel export error:', error);
+        alert('Error exporting to Excel: ' + error.message);
+    }
+}
+
+// Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
     editModal = new bootstrap.Modal(document.getElementById('editModal'));
     loadCompanies();
+    loadCompaniesForFilter();
+    loadEligibilityResults();
 });
 
 // Add skill row
@@ -184,14 +363,29 @@ document.getElementById('companyForm').addEventListener('submit', async function
     }
     
     try {
-        const response = await fetch('http://127.0.0.1:8080/api/companies', {
+        const token = sessionStorage.getItem('authToken');
+        if (!token) {
+            alert('Session expired. Please login again.');
+            window.location.href = 'admin_login.html';
+            return;
+        }
+        
+        const response = await fetch('http://localhost:8080/api/companies', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'},
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token
+            },
             body: JSON.stringify({ name: name, link: link, requiredCgpa: (isFinite(cgpa) && cgpa >= 0) ? cgpa : null, skills: skills })
         });
         
         const data = await response.json();
         if (!response.ok) {
+            if (response.status === 401 || response.status === 403) {
+                alert('Session expired. Please login again.');
+                window.location.href = 'admin_login.html';
+                return;
+            }
             alert(data.error || 'Failed to save company');
             return;
         }
@@ -271,13 +465,28 @@ async function deleteCompany(companyId) {
     if (!confirm('Are you sure you want to delete this company?')) return;
     
     try {
-        const response = await fetch('http://127.0.0.1:8080/api/companies/' + companyId, {
+        const token = sessionStorage.getItem('authToken');
+        if (!token) {
+            alert('Session expired. Please login again.');
+            window.location.href = 'admin_login.html';
+            return;
+        }
+        
+        const response = await fetch('http://localhost:8080/api/companies/' + companyId, {
             method: 'DELETE',
-            headers: {'Content-Type': 'application/json'}
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token
+            }
         });
         
         const data = await response.json();
         if (!response.ok) {
+            if (response.status === 401 || response.status === 403) {
+                alert('Session expired. Please login again.');
+                window.location.href = 'admin_login.html';
+                return;
+            }
             alert(data.error || 'Failed to delete company');
             return;
         }
@@ -293,7 +502,7 @@ async function loadCompanies(){
     const list = document.getElementById('companyList');
     list.innerHTML = '<li class="list-group-item">Loading...</li>';
     try {
-        const response = await fetch('http://127.0.0.1:8080/api/companies');
+        const response = await fetch('http://localhost:8080/api/companies');
         if (!response.ok) throw new Error('Failed to load');
         const companies = await response.json();
         
@@ -368,14 +577,29 @@ document.getElementById('saveEditBtn').addEventListener('click', async function(
     }
     
     try {
-        const response = await fetch('http://127.0.0.1:8080/api/companies/' + companyId, {
+        const token = sessionStorage.getItem('authToken');
+        if (!token) {
+            alert('Session expired. Please login again.');
+            window.location.href = 'admin_login.html';
+            return;
+        }
+        
+        const response = await fetch('http://localhost:8080/api/companies/' + companyId, {
             method: 'PUT',
-            headers: {'Content-Type': 'application/json'},
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token
+            },
             body: JSON.stringify({ name: name, link: link, requiredCgpa: (isFinite(cgpa) && cgpa >= 0) ? cgpa : null, skills: skills })
         });
         
         const data = await response.json();
         if (!response.ok) {
+            if (response.status === 401 || response.status === 403) {
+                alert('Session expired. Please login again.');
+                window.location.href = 'admin_login.html';
+                return;
+            }
             alert(data.error || 'Failed to update company');
             return;
         }
@@ -406,6 +630,18 @@ document.getElementById('editAddSkill').addEventListener('click', function() {
         div.remove();
     });
 });
+
+// Display admin email in navbar
+const email = sessionStorage.getItem('adminEmail');
+if (email) {
+    document.getElementById('navAdminEmail').textContent = email;
+}
+
+// Logout function
+function logout() {
+    sessionStorage.removeItem('adminEmail');
+    window.location.href = 'index.html';
+}
 </script>
 </body>
 </html>

@@ -24,6 +24,9 @@
       <div class="mb-3">
         <label class="form-label">Password</label>
         <input type="password" id="loginPassword" class="form-control" placeholder="Enter password" required>
+        <div class="text-end mt-1">
+          <a href="forgot_password.html" class="text-decoration-none small">Forgot Password?</a>
+        </div>
       </div>
       <button type="submit" class="btn btn-custom w-100">Login</button>
       <p class="text-center mt-3">New student? <a href="user_register.html">Register</a></p>
@@ -32,13 +35,15 @@
 </div>
 
 <script>
+// Handle student login: send credentials to the API and keep the
+// logged-in email and token in sessionStorage for authenticated requests.
 document.getElementById('studentLoginForm').addEventListener('submit', async function (event) {
   event.preventDefault();
   const email = document.getElementById('loginEmail').value;
   const password = document.getElementById('loginPassword').value;
   
   try {
-    const apiUrl = 'http://127.0.0.1:8080/api/login';
+    const apiUrl = 'http://localhost:8080/api/login';
     console.log('Attempting login to:', apiUrl);
     
     const response = await fetch(apiUrl, {
@@ -58,8 +63,9 @@ document.getElementById('studentLoginForm').addEventListener('submit', async fun
       return;
     }
     
-    // Save email for later use
+    // Save email and token for authenticated requests
     sessionStorage.setItem('studentEmail', email);
+    sessionStorage.setItem('authToken', data.token);
     window.location.href = 'student_dashboard.html';
   } catch (error) {
     console.error('Login error:', error);

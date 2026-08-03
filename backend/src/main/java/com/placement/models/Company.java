@@ -1,5 +1,9 @@
 package com.placement.models;
 
+/**
+ * Small value object for company details used by the admin UI and
+ * eligibility logic. Keep fields simple and serializable.
+ */
 public class Company {
     private int id;
     private String name;

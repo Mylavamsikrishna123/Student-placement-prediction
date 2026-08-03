@@ -65,3 +65,49 @@ footer {
   text-align: center;
   margin-top: 50px;
 }
+
+/* Scrollable lists */
+#companyList {
+  max-height: 500px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+#eligibilityResults {
+  max-height: 500px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.list-group {
+  max-height: 500px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* Custom scrollbar styling */
+#companyList::-webkit-scrollbar,
+#eligibilityResults::-webkit-scrollbar,
+.list-group::-webkit-scrollbar {
+  width: 8px;
+}
+
+#companyList::-webkit-scrollbar-track,
+#eligibilityResults::-webkit-scrollbar-track,
+.list-group::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+#companyList::-webkit-scrollbar-thumb,
+#eligibilityResults::-webkit-scrollbar-thumb,
+.list-group::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 10px;
+}
+
+#companyList::-webkit-scrollbar-thumb:hover,
+#eligibilityResults::-webkit-scrollbar-thumb:hover,
+.list-group::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}

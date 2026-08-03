@@ -2,6 +2,7 @@ CREATE DATABASE IF NOT EXISTS JAVAPROJECT;
 USE JAVAPROJECT;
 
 -- Drop existing tables if they exist (in reverse order of dependencies)
+DROP TABLE IF EXISTS eligibility_results;
 DROP TABLE IF EXISTS company_skills;
 DROP TABLE IF EXISTS student_skills;
 DROP TABLE IF EXISTS companies;
@@ -13,15 +14,19 @@ DROP TABLE IF EXISTS admin;
 CREATE TABLE students (
     student_id INT AUTO_INCREMENT PRIMARY KEY,
     student_name VARCHAR(100) NOT NULL,
-    student_id_number VARCHAR(50) NOT NULL UNIQUE,
+    student_id_number VARCHAR(50) UNIQUE, -- Nullable until student completes profile
     email VARCHAR(100) NOT NULL UNIQUE,
     password VARCHAR(100) NOT NULL,
     department VARCHAR(100),
-    degree VARCHAR(20) NOT NULL, -- B.Tech or M.Tech
+    branch VARCHAR(100),
+    degree VARCHAR(20), -- Nullable until student completes profile
     cgpa DECIMAL(4,2),
     college_name VARCHAR(150),
     phone_number VARCHAR(15),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    certifications TEXT,
+    backlogs INT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
 -- Skills table (master list of all possible skills)
@@ -59,6 +64,24 @@ CREATE TABLE company_skills (
     FOREIGN KEY (company_id) REFERENCES companies(company_id) ON DELETE CASCADE,
     FOREIGN KEY (skill_id) REFERENCES skills(skill_id) ON DELETE CASCADE,
     UNIQUE KEY unique_company_skill (company_id, skill_id)
+);
+
+-- Eligibility Results table (stores historical eligibility checks)
+CREATE TABLE eligibility_results (
+    result_id INT AUTO_INCREMENT PRIMARY KEY,
+    student_id INT NOT NULL,
+    student_name VARCHAR(100) NOT NULL,
+    company_id INT NOT NULL,
+    company_name VARCHAR(100) NOT NULL,
+    is_eligible BOOLEAN DEFAULT FALSE,
+    reason_if_not_eligible VARCHAR(500),
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (student_id) REFERENCES students(student_id) ON DELETE CASCADE,
+    FOREIGN KEY (company_id) REFERENCES companies(company_id) ON DELETE CASCADE,
+    INDEX idx_student (student_id),
+    INDEX idx_company (company_id),
+    INDEX idx_eligible (is_eligible),
+    INDEX idx_timestamp (timestamp)
 );
 
 -- Admin table

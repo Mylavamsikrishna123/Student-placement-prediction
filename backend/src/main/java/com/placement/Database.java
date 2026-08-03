@@ -10,65 +10,186 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.mindrot.jbcrypt.BCrypt;
 
-// Simple OOP Database helper. Each method opens its own Connection and closes it.
+/**
+ * Thin JDBC helper used by the API layer. Each call opens a connection,
+ * does the work, and closes it. This keeps the code easy to follow without
+ * introducing a connection pool for this project size.
+ */
 public class Database {
     private String dbUrl;
     private String dbUser;
     private String dbPass;
+    private Connection testConnection; // For test injection
 
+    /**
+     * Read DB settings from environment with sensible defaults for local dev.
+     * DB_URL, DB_USER, DB_PASS can override the defaults.
+     */
     public Database() {
         this.dbUrl = System.getenv().getOrDefault("DB_URL", "jdbc:mysql://localhost:3306/JAVAPROJECT");
         this.dbUser = System.getenv().getOrDefault("DB_USER", "root");
         this.dbPass = System.getenv().getOrDefault("DB_PASS", "root");
+        this.testConnection = null;
+        
+        // Validate database connection on startup
+        try {
+            System.out.println("Validating database connection...");
+            Connection conn = DriverManager.getConnection(dbUrl, dbUser, dbPass);
+            System.out.println("✓ Database connection successful");
+            System.out.println("  URL: " + dbUrl);
+            System.out.println("  User: " + dbUser);
+            conn.close();
+        } catch (SQLException e) {
+            System.err.println("✗ DATABASE CONNECTION FAILED!");
+            System.err.println("  Error: " + e.getMessage());
+            System.err.println("  URL: " + dbUrl);
+            System.err.println("  User: " + dbUser);
+            System.err.println("\nPlease check:");
+            System.err.println("  1. MySQL is running (net start MySQL80)");
+            System.err.println("  2. Database 'JAVAPROJECT' exists");
+            System.err.println("  3. User '" + dbUser + "' has correct password");
+            System.err.println("  4. Run: mysql -u root -p < database_schema.sql");
+            // Don't exit - let it fail on first actual request with clear error
+        }
+    }
+    
+    /**
+     * Constructor for testing with injected connection.
+     */
+    public Database(Connection testConnection) {
+        this.testConnection = testConnection;
     }
 
+    /** Open a new JDBC connection. Caller is responsible for closing. */
     private Connection open() throws SQLException {
+        if (testConnection != null) {
+            return testConnection; // Use injected test connection
+        }
         return DriverManager.getConnection(dbUrl, dbUser, dbPass);
     }
 
+    /**
+     * Register a new student account. Password is hashed with BCrypt before storage.
+     * Name is derived from email for initial creation; full profile completed later.
+     *
+     * @return true on insert success; throws EMAIL_DUPLICATE for unique email violation.
+     */
     public boolean register(String email, String password, String name) {
+        // Validate inputs
+        if (email == null || email.trim().isEmpty()) {
+            throw new IllegalArgumentException("Email cannot be empty");
+        }
+        if (password == null || password.trim().isEmpty()) {
+            throw new IllegalArgumentException("Password cannot be empty");
+        }
+        if (name == null || name.trim().isEmpty()) {
+            throw new IllegalArgumentException("Name cannot be empty");
+        }
+        
+        // Hash password before storage
+        String hashedPassword = BCrypt.hashpw(password, BCrypt.gensalt(12));
+        
         String sql = "INSERT INTO students (student_name, student_id_number, email, password, department, degree) VALUES (?, ?, ?, ?, ?, ?)";
         try (Connection c = open(); PreparedStatement ps = c.prepareStatement(sql)) {
-            String studentId = "STU" + (System.currentTimeMillis() % 100000);
             ps.setString(1, name);
-            ps.setString(2, studentId);
+            // Do not auto-generate student_id_number; leave NULL to be set later via profile save
+            ps.setNull(2, java.sql.Types.VARCHAR);
             ps.setString(3, email);
-            ps.setString(4, password);
-            ps.setString(5, "");
-            ps.setString(6, "B.Tech");
+            ps.setString(4, hashedPassword);
+            ps.setNull(5, java.sql.Types.VARCHAR); // department can be NULL
+            // Do not prefill degree; leave NULL until student sets it in profile
+            ps.setNull(6, java.sql.Types.VARCHAR);
             int rows = ps.executeUpdate();
             return rows > 0;
         } catch (SQLException e) {
+            // Check for duplicate email error
+            String msg = e.getMessage() != null ? e.getMessage() : "";
+            
+            // MySQL error code 1062
+            if (e.getErrorCode() == 1062 && msg.toLowerCase().contains("email")) {
+                throw new RuntimeException("EMAIL_DUPLICATE", e);
+            }
+            
+            // H2 error code 23505 (integrity constraint violation)
+            if (e.getErrorCode() == 23505) {
+                throw new RuntimeException("EMAIL_DUPLICATE", e);
+            }
+            
+            // H2 and other databases: check error message for UNIQUE constraint
+            if (msg.toUpperCase().contains("UNIQUE") && msg.toUpperCase().contains("EMAIL")) {
+                throw new RuntimeException("EMAIL_DUPLICATE", e);
+            }
+            
             e.printStackTrace();
             return false;
         }
     }
 
+    /**
+     * Validate credentials for either student or admin tables using BCrypt.
+     * Falls back to plaintext comparison for migration compatibility.
+     */
     public boolean login(String email, String password, String role) {
         String table = "students";
         if ("admin".equalsIgnoreCase(role)) table = "admin";
-        String sql = "SELECT 1 FROM " + table + " WHERE email = ? AND password = ? LIMIT 1";
+        
+        // Try to get password_hash if it exists, otherwise just get password
+        String sql = "SELECT password FROM " + table + " WHERE LOWER(email) = LOWER(?) LIMIT 1";
         try (Connection c = open(); PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setString(1, email);
-            ps.setString(2, password);
             try (ResultSet rs = ps.executeQuery()) {
-                return rs.next();
+                if (!rs.next()) {
+                    System.out.println("DEBUG LOGIN - Email: " + email + ", Role: " + role + ", Result: false (not found)");
+                    return false;
+                }
+                
+                String storedPassword = rs.getString("password");
+                
+                // Check if password is a BCrypt hash (starts with $2a$ or $2b$)
+                if (storedPassword != null && storedPassword.startsWith("$2")) {
+                    try {
+                        boolean valid = BCrypt.checkpw(password, storedPassword);
+                        System.out.println("DEBUG LOGIN - Email: " + email + ", Role: " + role + " (BCrypt), Result: " + valid);
+                        return valid;
+                    } catch (Exception e) {
+                        System.out.println("DEBUG LOGIN - BCrypt check failed, trying plaintext");
+                    }
+                }
+                
+                // Plaintext comparison
+                if (storedPassword != null) {
+                    boolean valid = storedPassword.equals(password);
+                    System.out.println("DEBUG LOGIN - Email: " + email + ", Role: " + role + " (plaintext), Result: " + valid);
+                    return valid;
+                }
+                
+                return false;
             }
         } catch (SQLException e) {
+            System.out.println("DEBUG LOGIN - Exception: " + e.getMessage());
             e.printStackTrace();
             return false;
         }
     }
 
+    /**
+     * Save or update a student's profile and skills in a single transaction.
+     * Skills are replaced wholesale based on the provided map.
+     */
     public boolean saveProfile(String email, String name, String idNumber, String department,
                                String degree, String collegeName, String phone, Double cgpa,
-                               Map<String,Integer> skills) {
+                               Map<String,Integer> skills, String branch, String certifications, int backlogs) {
         Connection c = null;
         try {
             c = open();
             c.setAutoCommit(false);
-            String updateSql = "UPDATE students SET student_name=?, student_id_number=?, department=?, degree=?, college_name=?, phone_number=?, cgpa=? WHERE email=?";
+            // Ensure ID number uniqueness (allow keeping same value for this email)
+            if (!isIdNumberAvailable(idNumber, email)) {
+                throw new SQLException("ID_NUMBER_DUPLICATE");
+            }
+            String updateSql = "UPDATE students SET student_name=?, student_id_number=?, department=?, degree=?, college_name=?, phone_number=?, cgpa=?, certifications=?, backlogs=? WHERE email=?";
             try (PreparedStatement ps = c.prepareStatement(updateSql)) {
                 ps.setString(1, name);
                 ps.setString(2, idNumber);
@@ -77,7 +198,9 @@ public class Database {
                 ps.setString(5, collegeName);
                 ps.setString(6, phone);
                 ps.setDouble(7, cgpa != null ? cgpa : 0.0);
-                ps.setString(8, email);
+                ps.setString(8, certifications != null ? certifications : "");
+                ps.setInt(9, backlogs);
+                ps.setString(10, email);
                 ps.executeUpdate();
             }
 
@@ -113,14 +236,23 @@ public class Database {
             try { if (c != null && !c.isClosed()) c.close(); } catch (SQLException ex) {}
         }
     }
+    
+    /** Overload kept for callers that don’t pass new fields yet. */
+    public boolean saveProfile(String email, String name, String idNumber, String department,
+                               String degree, String collegeName, String phone, Double cgpa,
+                               Map<String,Integer> skills) {
+        return saveProfile(email, name, idNumber, department, degree, collegeName, phone, cgpa, skills, "", "", 0);
+    }
 
+    /** Load a student's profile with a flat map plus a nested skills map. */
     public Map<String,Object> getStudentProfile(String email) {
         Map<String,Object> profile = new HashMap<>();
-        String sql = "SELECT student_id, student_name, student_id_number, email, department, degree, cgpa, college_name, phone_number FROM students WHERE email = ?";
+        String sql = "SELECT student_id, student_name, student_id_number, email, department, degree, cgpa, college_name, phone_number, certifications, backlogs FROM students WHERE email = ?";
         try (Connection c = open(); PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setString(1, email);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
+                    profile.put("id", rs.getInt("student_id"));
                     profile.put("name", rs.getString("student_name"));
                     profile.put("idNumber", rs.getString("student_id_number"));
                     profile.put("email", rs.getString("email"));
@@ -130,6 +262,9 @@ public class Database {
                     profile.put("cgpa", cgpaObj != null ? ((Number)cgpaObj).doubleValue() : null);
                     profile.put("collegeName", rs.getString("college_name"));
                     profile.put("phone", rs.getString("phone_number"));
+                    profile.put("certifications", rs.getString("certifications"));
+                    Object backlogsObj = rs.getObject("backlogs");
+                    profile.put("backlogs", backlogsObj != null ? ((Number)backlogsObj).intValue() : 0);
 
                     int studentId = rs.getInt("student_id");
                     Map<String,Integer> skills = new HashMap<>();
@@ -149,6 +284,7 @@ public class Database {
         return profile;
     }
 
+    /** List companies with a simple, human-readable skills summary. */
     public List<Map<String,Object>> getCompanies() {
         List<Map<String,Object>> list = new ArrayList<>();
         String sql = "SELECT c.company_id, c.company_name, c.application_link, c.required_cgpa, "
@@ -171,6 +307,7 @@ public class Database {
         return list;
     }
 
+    /** Insert a company and its required skills in one go. */
     public boolean addCompany(String name, String link, double requiredCgpa, Map<String,Integer> requiredSkills) {
         Connection c = null;
         try {
@@ -202,6 +339,7 @@ public class Database {
         finally { try { if (c!=null) c.close(); } catch (SQLException ex) {} }
     }
 
+    /** Update a company and replace its required skills. */
     public boolean updateCompany(int companyId, String name, String link, double requiredCgpa, Map<String,Integer> requiredSkills) {
         Connection c = null;
         try {
@@ -228,6 +366,7 @@ public class Database {
         finally { try { if (c!=null) c.close(); } catch (SQLException ex) {} }
     }
 
+    /** Delete a company by id. */
     public boolean deleteCompany(int companyId) {
         String sql = "DELETE FROM companies WHERE company_id=?";
         try (Connection c = open(); PreparedStatement ps = c.prepareStatement(sql)) {
@@ -235,6 +374,10 @@ public class Database {
         } catch (SQLException e) { e.printStackTrace(); return false; }
     }
 
+    /**
+     * Determine eligible companies for a student based on CGPA and skills.
+     * A small optimization: if CGPA ≥ 9.0, show all companies at once.
+     */
     public List<Map<String,Object>> getEligibleCompanies(double cgpa, Map<String,Integer> studentSkills) {
         List<Map<String,Object>> eligible = new ArrayList<>();
         if (cgpa >= 9.0) {
@@ -276,6 +419,7 @@ public class Database {
         return eligible;
     }
 
+    /** Get or create the id for a skill name. */
     private int getOrCreateSkillId(Connection conn, String skillName) throws SQLException {
         String sel = "SELECT skill_id FROM skills WHERE skill_name = ?";
         try (PreparedStatement ps = conn.prepareStatement(sel)) {
@@ -287,5 +431,317 @@ public class Database {
             ps.setString(1, skillName); ps.executeUpdate(); try (ResultSet rs = ps.getGeneratedKeys()) { if (rs.next()) return rs.getInt(1); }
         }
         return -1;
+    }
+
+    /** Fetch the student_id for an email, or -1 if not found. */
+    public int getStudentIdByEmail(String email) {
+        String sql = "SELECT student_id FROM students WHERE email = ?";
+        try (Connection c = open(); PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, email);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return rs.getInt("student_id");
+            }
+        } catch (SQLException e) { e.printStackTrace(); }
+        return -1;
+    }
+
+    // Eligibility check logic
+    public boolean checkStudentEligibility(int studentId, int companyId) {
+        try (Connection c = open(); PreparedStatement ps = c.prepareStatement(
+                "SELECT s.cgpa, c.required_cgpa FROM students s, companies c WHERE s.student_id = ? AND c.company_id = ?")) {
+            ps.setInt(1, studentId);
+            ps.setInt(2, companyId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    Object cgpaObj = rs.getObject(1);
+                    Double studentCgpa = cgpaObj != null ? ((Number) cgpaObj).doubleValue() : null;
+                    Object reqCgpaObj = rs.getObject(2);
+                    Double requiredCgpa = reqCgpaObj != null ? ((Number) reqCgpaObj).doubleValue() : null;
+                    if (requiredCgpa != null && (studentCgpa == null || studentCgpa < requiredCgpa)) return false;
+                    return true;
+                }
+            }
+        } catch (SQLException e) { e.printStackTrace(); }
+        return false;
+    }
+
+    /**
+     * Short reason why a student isn’t eligible, or null if eligible.
+     */
+    public String getEligibilityReason(int studentId, int companyId) {
+        try (Connection c = open(); PreparedStatement ps = c.prepareStatement(
+                "SELECT s.cgpa, s.backlogs, c.required_cgpa FROM students s, companies c WHERE s.student_id = ? AND c.company_id = ?")) {
+            ps.setInt(1, studentId);
+            ps.setInt(2, companyId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    Object cgpaObj = rs.getObject(1);
+                    Double studentCgpa = cgpaObj != null ? ((Number) cgpaObj).doubleValue() : null;
+                    int backlogs = rs.getInt(2);
+                    Object reqCgpaObj = rs.getObject(3);
+                    Double requiredCgpa = reqCgpaObj != null ? ((Number) reqCgpaObj).doubleValue() : null;
+                    
+                    if (studentCgpa == null) return "Profile incomplete: CGPA not set";
+                    if (backlogs > 0) return "Student has " + backlogs + " backlogs";
+                    if (requiredCgpa != null && studentCgpa < requiredCgpa) 
+                        return "CGPA " + studentCgpa + " is below required " + requiredCgpa;
+                    return null;
+                }
+            }
+        } catch (SQLException e) { e.printStackTrace(); }
+        return "Unknown error";
+    }
+
+    /** Replace any previous result for (student, company) with the latest one. */
+    public void saveEligibilityResult(int studentId, String studentName, int companyId, String companyName, boolean isEligible, String reason) {
+        try (Connection c = open()) {
+            // First delete existing result for this student-company pair
+            String deleteSql = "DELETE FROM eligibility_results WHERE student_id = ? AND company_id = ?";
+            try (PreparedStatement deletePs = c.prepareStatement(deleteSql)) {
+                deletePs.setInt(1, studentId);
+                deletePs.setInt(2, companyId);
+                deletePs.executeUpdate();
+            }
+            
+            // Then insert the new result
+            String insertSql = "INSERT INTO eligibility_results (student_id, student_name, company_id, company_name, is_eligible, reason_if_not_eligible) VALUES (?, ?, ?, ?, ?, ?)";
+            try (PreparedStatement insertPs = c.prepareStatement(insertSql)) {
+                insertPs.setInt(1, studentId);
+                insertPs.setString(2, studentName);
+                insertPs.setInt(3, companyId);
+                insertPs.setString(4, companyName);
+                insertPs.setBoolean(5, isEligible);
+                insertPs.setString(6, reason);
+                insertPs.executeUpdate();
+            }
+        } catch (SQLException e) { e.printStackTrace(); }
+    }
+
+    /** Query eligibility results with optional filters. */
+    public List<Map<String,Object>> getEligibilityResults(Integer studentId, Integer companyId, Boolean isEligible) {
+        List<Map<String,Object>> results = new ArrayList<>();
+        StringBuilder sql = new StringBuilder(
+            "SELECT er.*, s.student_id_number, s.department, c.application_link FROM eligibility_results er " +
+            "LEFT JOIN students s ON er.student_id = s.student_id " +
+            "LEFT JOIN companies c ON er.company_id = c.company_id WHERE 1=1"
+        );
+        if (studentId != null) sql.append(" AND er.student_id = ?");
+        if (companyId != null) sql.append(" AND er.company_id = ?");
+        if (isEligible != null) sql.append(" AND er.is_eligible = ?");
+        sql.append(" ORDER BY er.timestamp DESC");
+        
+        try (Connection c = open(); PreparedStatement ps = c.prepareStatement(sql.toString())) {
+            int idx = 1;
+            if (studentId != null) ps.setInt(idx++, studentId);
+            if (companyId != null) ps.setInt(idx++, companyId);
+            if (isEligible != null) ps.setBoolean(idx++, isEligible);
+            
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    Map<String,Object> row = new HashMap<>();
+                    row.put("result_id", rs.getInt("result_id"));
+                    row.put("student_id", rs.getInt("student_id"));
+                    row.put("student_name", rs.getString("student_name"));
+                    row.put("student_idnumber", rs.getString("student_id_number"));
+                    row.put("student_department", rs.getString("department"));
+                    row.put("company_id", rs.getInt("company_id"));
+                    row.put("company_name", rs.getString("company_name"));
+                    row.put("company_link", rs.getString("application_link"));
+                    row.put("is_eligible", rs.getBoolean("is_eligible"));
+                    row.put("reason", rs.getString("reason_if_not_eligible"));
+                    row.put("timestamp", rs.getTimestamp("timestamp").toString());
+                    results.add(row);
+                }
+            }
+        } catch (SQLException e) { e.printStackTrace(); }
+        return results;
+    }
+
+    /** Compute and persist eligibility for all companies for a student. */
+    public void checkAndSaveEligibilityForStudent(int studentId, String email) {
+        // Get student info
+        Map<String,Object> profile = getStudentProfile(email);
+        String studentName = (String) profile.getOrDefault("name", "Unknown");
+        
+        // Get all companies
+        List<Map<String,Object>> companies = getCompanies();
+        
+        // Check eligibility for each company
+        for (Map<String,Object> company : companies) {
+            int companyId = ((Number) company.get("id")).intValue();
+            String companyName = (String) company.get("name");
+            
+            boolean isEligible = checkStudentEligibility(studentId, companyId);
+            String reason = isEligible ? null : getEligibilityReason(studentId, companyId);
+            
+            saveEligibilityResult(studentId, studentName, companyId, companyName, isEligible, reason);
+        }
+    }
+
+    // --- New helper: check ID number availability ---
+    public boolean isIdNumberAvailable(String idNumber, String email) {
+        if (idNumber == null || idNumber.isEmpty()) return false; // treated as required upstream
+        String sql = "SELECT email FROM students WHERE student_id_number = ? LIMIT 1";
+        try (Connection c = open(); PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, idNumber);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (!rs.next()) return true; // not used
+                String existingEmail = rs.getString("email");
+                return existingEmail.equalsIgnoreCase(email); // same owner is fine
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    // ============== PASSWORD RESET FUNCTIONALITY ==============
+    
+    /**
+     * Generate and store a password reset token for the given email.
+     * Returns the generated token string, or null if email doesn't exist.
+     * Token expires in 1 hour.
+     */
+    public String generatePasswordResetToken(String email) {
+        // First verify email exists in students table
+        if (!emailExists(email)) {
+            return null;
+        }
+        
+        // Generate secure random token (32 bytes)
+        byte[] randomBytes = new byte[32];
+        new java.security.SecureRandom().nextBytes(randomBytes);
+        String token = java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(randomBytes);
+        
+        // Calculate expiry time (1 hour from now)
+        long expiryMillis = System.currentTimeMillis() + (60 * 60 * 1000);
+        java.sql.Timestamp expiresAt = new java.sql.Timestamp(expiryMillis);
+        
+        // Store token in database
+        String sql = "INSERT INTO password_reset_tokens (email, reset_token, expires_at) VALUES (?, ?, ?)";
+        try (Connection c = open(); PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, email);
+            ps.setString(2, token);
+            ps.setTimestamp(3, expiresAt);
+            ps.executeUpdate();
+            return token;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+    
+    /**
+     * Verify if a reset token is valid (exists, not expired, not used).
+     * Returns the associated email if valid, null otherwise.
+     */
+    public String verifyResetToken(String token) {
+        String sql = "SELECT email, expires_at, used FROM password_reset_tokens WHERE reset_token = ? LIMIT 1";
+        try (Connection c = open(); PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, token);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (!rs.next()) {
+                    return null; // Token doesn't exist
+                }
+                
+                String email = rs.getString("email");
+                java.sql.Timestamp expiresAt = rs.getTimestamp("expires_at");
+                boolean used = rs.getBoolean("used");
+                
+                // Check if token is expired
+                if (System.currentTimeMillis() > expiresAt.getTime()) {
+                    return null; // Token expired
+                }
+                
+                // Check if token was already used
+                if (used) {
+                    return null; // Token already used
+                }
+                
+                return email;
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+    
+    /**
+     * Reset password using a valid token.
+     * Returns true if successful, false if token invalid or password update failed.
+     */
+    public boolean resetPasswordWithToken(String token, String newPassword) {
+        // Validate inputs
+        if (token == null || token.trim().isEmpty()) {
+            throw new IllegalArgumentException("Token cannot be empty");
+        }
+        if (newPassword == null || newPassword.trim().isEmpty()) {
+            throw new IllegalArgumentException("Password cannot be empty");
+        }
+        
+        // Verify token and get email
+        String email = verifyResetToken(token);
+        if (email == null) {
+            return false; // Invalid or expired token
+        }
+        
+        // Hash new password
+        String hashedPassword = BCrypt.hashpw(newPassword, BCrypt.gensalt(12));
+        
+        try (Connection c = open()) {
+            // Update password
+            String updateSql = "UPDATE students SET password = ? WHERE LOWER(email) = LOWER(?)";
+            try (PreparedStatement ps = c.prepareStatement(updateSql)) {
+                ps.setString(1, hashedPassword);
+                ps.setString(2, email);
+                int rows = ps.executeUpdate();
+                
+                if (rows == 0) {
+                    return false; // No student found with that email
+                }
+            }
+            
+            // Mark token as used
+            String markUsedSql = "UPDATE password_reset_tokens SET used = TRUE WHERE reset_token = ?";
+            try (PreparedStatement ps = c.prepareStatement(markUsedSql)) {
+                ps.setString(1, token);
+                ps.executeUpdate();
+            }
+            
+            return true;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+    
+    /**
+     * Check if an email exists in the students table.
+     */
+    private boolean emailExists(String email) {
+        String sql = "SELECT email FROM students WHERE LOWER(email) = LOWER(?) LIMIT 1";
+        try (Connection c = open(); PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, email);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+    
+    /**
+     * Cleanup expired and used reset tokens (maintenance method).
+     * Should be called periodically to keep database clean.
+     */
+    public int cleanupExpiredResetTokens() {
+        String sql = "DELETE FROM password_reset_tokens WHERE expires_at < NOW() OR used = TRUE";
+        try (Connection c = open(); PreparedStatement ps = c.prepareStatement(sql)) {
+            return ps.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return 0;
+        }
     }
 }

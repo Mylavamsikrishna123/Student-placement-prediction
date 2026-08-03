@@ -1,5 +1,8 @@
 package com.placement.models;
 
+/**
+ * Minimal skill record. Names are unique in the database and map to an id.
+ */
 public class Skill {
     private int id;
     private String name;

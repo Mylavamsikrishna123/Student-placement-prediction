@@ -31,13 +31,15 @@
 </div>
 
 <script>
+// Simple admin login: validates against the backend and stores the
+// admin email and token for authenticated requests.
 document.getElementById('adminLoginForm').addEventListener('submit', async function (event) {
   event.preventDefault();
   const email = document.getElementById('adminEmail').value;
   const password = document.getElementById('adminPassword').value;
   
   try {
-    const apiUrl = 'http://127.0.0.1:8080/api/login';
+    const apiUrl = 'http://localhost:8080/api/login';
     console.log('Attempting login to:', apiUrl);
     
     const response = await fetch(apiUrl, {
@@ -57,6 +59,9 @@ document.getElementById('adminLoginForm').addEventListener('submit', async funct
       return;
     }
     
+    // Save email and token for admin context
+    sessionStorage.setItem('adminEmail', email);
+    sessionStorage.setItem('authToken', data.token);
     window.location.href = 'admin_dashboard.html';
   } catch (error) {
     console.error('Login error:', error);
