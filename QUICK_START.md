@@ -1,284 +1,99 @@
-# Security Upgrade - Quick Start Guide 🚀
+# Quick Start Guide
 
-## What Was Implemented
+Get the Student Placement Prediction System running locally in a few minutes.
 
-Your Student Placement Prediction System has been upgraded with **enterprise-grade security**:
+## Prerequisites
 
-✅ **Password Security** - BCrypt hashing (12 rounds)  
-✅ **Authentication** - Token-based auth (24-hour expiry)  
-✅ **Authorization** - Role-based access (student/admin)  
-✅ **Input Validation** - Server-side validation with generic errors  
-✅ **CORS Security** - Whitelist-based origin control  
-✅ **Comprehensive Testing** - 27 test cases (15 database + 12 auth)  
+- **Java 17+** (JDK)
+- **Maven 3.8+** (install via your package manager — do not use a bundled copy)
+- **MySQL 8.x**
+- **Python 3.x** (only to serve the static frontend)
 
----
+## 1. Database Setup
 
-## Quick Deployment (5 Steps)
+From the repo root:
 
-### Step 1: Apply Database Migration (2 minutes)
 ```bash
-mysql -u root -p JAVAPROJECT < migrations/2025-12-01_add_password_hash.sql
+mysql -u root -p < database_schema.sql
 ```
 
-**What it does:** Adds `password_hash` column to students and admin tables
+This creates the `JAVAPROJECT` database with all tables (`students`, `skills`,
+`student_skills`, `companies`, `company_skills`, `admin`, `password_reset_tokens`)
+and seeds the default admin and common skills.
 
-### Step 2: Set Environment Variable (Optional)
+Default admin login: `admin@placement.com` / `admin123` (stored as a BCrypt hash).
+
+## 2. Configure the Backend (optional)
+
+The backend reads these environment variables (defaults shown):
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `DB_URL` | `jdbc:mysql://localhost:3306/JAVAPROJECT` | JDBC URL |
+| `DB_USER` | `root` | DB user |
+| `DB_PASS` | `root` | DB password |
+| `PORT` | `8080` | Backend listen port |
+| `ALLOWED_ORIGINS` | `http://localhost:5500` | Comma-separated CORS allow-list |
+
 ```bash
-# Default is localhost:5500, change for production
-export ALLOWED_ORIGINS="https://yourdomain.com"
+export DB_URL="jdbc:mysql://localhost:3306/JAVAPROJECT"
+export DB_USER="root"
+export DB_PASS="yourpassword"
+export ALLOWED_ORIGINS="http://localhost:5500"
 ```
 
-**What it does:** Configures CORS whitelist
+## 3. Build & Run the Backend
 
-### Step 3: Run Tests (1 minute)
 ```bash
 cd backend
-mvn test
+mvn clean package
+java -jar target/placement-backend-1.0.0-jar-with-dependencies.jar
 ```
 
-**Expected Output:** 
-```
-Tests run: 27, Failures: 0, Errors: 0, Skipped: 0
-BUILD SUCCESS
-```
+The server prints its registered endpoints on startup and listens on
+`http://localhost:8080` (or the port you set). Check it with:
 
-### Step 4: Start Backend
 ```bash
-java -jar backend/target/backend-1.0-SNAPSHOT.jar
+curl http://localhost:8080/api/health
+# {"status":"ok"}
 ```
 
-**Expected Output:**
-```
-Server started on port 8080
-```
+## 4. Serve the Frontend
 
-### Step 5: Start Frontend
 ```bash
 cd ui
 python -m http.server 5500
 ```
 
-**Access:** Open `http://localhost:5500` in browser
+Open `http://localhost:5500/index.html`.
 
----
+## 5. Run the Tests
 
-## Quick Test (2 minutes)
-
-### Test 1: Registration
-1. Open `http://localhost:5500/user_register.html`
-2. Register with email `test@example.com` password `password123`
-3. ✅ Success message appears
-
-### Test 2: Login & Token
-1. Open `http://localhost:5500/user_login.html`
-2. Login with credentials from step 1
-3. Press F12 → Application → Session Storage
-4. ✅ Verify `authToken` exists
-
-### Test 3: Profile Update
-1. Navigate to student dashboard
-2. Update profile information
-3. Press F12 → Network tab → Click save
-4. ✅ Verify `Authorization: Bearer <token>` in headers
-5. ✅ Verify 200 OK response
-
-### Test 4: Admin Access
-1. Login as admin: `admin@test.com` / `admin123`
-2. Navigate to admin dashboard
-3. Try creating/updating/deleting company
-4. ✅ Operations succeed with admin token
-
-### Test 5: Security Check
-1. Clear session storage (F12 → Application → Clear)
-2. Try to update profile
-3. ✅ Should redirect to login (session expired)
-
----
-
-## What Changed
-
-### Database
-```sql
--- Added columns
-students.password_hash VARCHAR(60)  -- BCrypt hashed passwords
-admin.password_hash VARCHAR(60)     -- BCrypt hashed passwords
-```
-
-### Backend
-```java
-// Added security features
-- BCrypt password hashing
-- Token generation and validation
-- Input validation (email, password, phone, CGPA)
-- CORS whitelist
-- Role-based authorization
-```
-
-### Frontend
-```javascript
-// Added token handling
-- Store token on login
-- Send token with authenticated requests
-- Handle 401/403 errors with redirect
-```
-
----
-
-## How to Use
-
-### For Students
-1. **Register:** Use valid email and password (8+ characters)
-2. **Login:** Credentials validated with BCrypt
-3. **Session:** 24-hour token stored automatically
-4. **Profile:** Update requires valid token (self only)
-
-### For Admins
-1. **Login:** Default admin `admin@test.com` / `admin123`
-2. **Companies:** Create/update/delete requires admin token
-3. **Security:** Students cannot access admin functions
-
-### For Legacy Users
-- **Auto-Upgrade:** Plaintext passwords converted to BCrypt on first login
-- **No Action Required:** Existing users continue to work
-- **Seamless:** Happens transparently in background
-
----
-
-## Documentation
-
-Comprehensive guides available:
-
-1. **SECURITY_IMPLEMENTATION.md** - Complete technical details
-2. **TESTING_GUIDE.md** - How to run and create tests
-3. **DEPLOYMENT_SUMMARY.md** - Full deployment instructions
-4. **BEFORE_AFTER_COMPARISON.md** - Visual comparison of changes
-5. **QUICK_START.md** - This guide
-
----
-
-## Troubleshooting
-
-### Problem: Tests fail
-**Solution:** 
 ```bash
-# Ensure dependencies are installed
-mvn clean install
+cd backend
 mvn test
 ```
 
-### Problem: "Unauthorized" error
-**Solution:**
-- Check token in sessionStorage: `console.log(sessionStorage.getItem('authToken'))`
-- Token might be expired (24 hours) - login again
+Pure unit tests run without a database. Tests that exercise `Database` use an
+in-memory H2 database (MySQL compatibility mode), so no MySQL server is needed
+for them. A few integration tests that require a live HTTP server + MySQL are
+`@Disabled` with instructions in the test class.
 
-### Problem: CORS error
-**Solution:**
-```bash
-# Check ALLOWED_ORIGINS environment variable
-echo $ALLOWED_ORIGINS
+## Smoke Test (manual)
 
-# For dev, should be http://localhost:5500
-export ALLOWED_ORIGINS="http://localhost:5500"
-```
+1. Open `http://localhost:5500/user_register.html` and register with a valid
+   email and a password of at least 8 characters.
+2. Open `http://localhost:5500/user_login.html` and log in. An `authToken` is
+   stored in `sessionStorage`.
+3. On the student dashboard, save a profile. The request includes
+   `Authorization: Bearer <token>` and returns `200`.
+4. Log in as admin (`admin@placement.com` / `admin123`) to manage companies.
 
-### Problem: Legacy users can't login
-**Solution:**
-- Verify migration script ran: `DESCRIBE students;` should show `password_hash` column
-- Check database connection in backend logs
-- Try with newly registered user first
+## Notes
 
----
-
-## Security Vulnerabilities Fixed
-
-| Issue | Before | After |
-|-------|--------|-------|
-| Password Storage | Plaintext | BCrypt hashed |
-| Password Logging | Logged to console | Removed |
-| Authentication | None | Token-based |
-| Authorization | None | Role-based |
-| CORS | Open (*) | Whitelist |
-| Input Validation | Minimal | Comprehensive |
-
-**Risk Reduction: 95%** ✅
-
----
-
-## Performance Impact
-
-- **Login:** +90ms (BCrypt verification)
-- **API Requests:** +1ms (token validation)
-- **Overall:** <5% overhead
-- **Security Gain:** 10000% improvement
-
-**Trade-off: Excellent!** ✅
-
----
-
-## Production Checklist
-
-Quick checklist before going live:
-
-- [ ] Database migration applied
-- [ ] Tests passing (27/27)
-- [ ] ALLOWED_ORIGINS set for production
-- [ ] Backend starts without errors
-- [ ] Frontend accessible
-- [ ] Login works with new user
-- [ ] Profile update requires token
-- [ ] Admin functions require admin role
-- [ ] Legacy users auto-upgraded
-
----
-
-## Support
-
-If you encounter issues:
-
-1. **Check Logs:** Backend console output for errors
-2. **Verify Database:** Migration applied correctly
-3. **Test Environment:** Start with localhost before production
-4. **Review Docs:** See SECURITY_IMPLEMENTATION.md for details
-
----
-
-## Next Steps
-
-### Immediate
-1. Apply migration to development database
-2. Run tests to verify everything works
-3. Test with browser (5-minute test above)
-4. Review documentation
-
-### Production
-1. Backup production database
-2. Apply migration to production
-3. Set ALLOWED_ORIGINS for production domain
-4. Deploy backend and frontend
-5. Monitor logs for any issues
-
-### Future Enhancements
-- JWT tokens (instead of opaque)
-- Email verification
-- Password reset
-- Two-factor authentication (2FA)
-- Rate limiting
-
----
-
-## Success Metrics
-
-After deployment, you should see:
-
-✅ **0 Critical Vulnerabilities** (down from 3)  
-✅ **0 High-Risk Issues** (down from 3)  
-✅ **100% Password Encryption**  
-✅ **100% Protected Routes Authenticated**  
-✅ **27 Test Cases Passing**  
-
-**Status: PRODUCTION READY** 🚀
-
----
-
-*Implementation by GitHub Copilot (Claude Sonnet 4.5)*  
-*Last Updated: December 2024*
+- Passwords are hashed with BCrypt (cost 12) and stored in the `password`
+  column. There is no plaintext fallback.
+- `/api/forgot-password` returns only a generic "if the email exists, a reset
+  code has been generated" message; it does **not** expose the token in the
+  response. For local development the generated token is logged server-side.
+- CORS reflects the `Origin` only for exact matches in `ALLOWED_ORIGINS`.

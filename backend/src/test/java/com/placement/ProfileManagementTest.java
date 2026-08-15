@@ -27,7 +27,7 @@ public class ProfileManagementTest {
                 "student_name VARCHAR(100) NOT NULL, " +
                 "student_id_number VARCHAR(50) UNIQUE, " +
                 "email VARCHAR(100) NOT NULL UNIQUE, " +
-                "password_hash VARCHAR(60), " +
+                "password VARCHAR(100), " +              // BCrypt hash (matches production)
                 "department VARCHAR(100), " +
                 "branch VARCHAR(100), " +
                 "degree VARCHAR(20), " +
@@ -128,14 +128,14 @@ public class ProfileManagementTest {
         
         // Insert first student with ID number
         try (Statement stmt = testConn.createStatement()) {
-            stmt.execute("INSERT INTO students (student_name, email, password_hash, student_id_number) VALUES " +
+            stmt.execute("INSERT INTO students (student_name, email, password, student_id_number) VALUES " +
                 "('User 1', 'user1@example.com', 'hash', '" + idNumber + "')");
         }
         
         // Try to insert second student with same ID - should fail
         Exception exception = assertThrows(SQLException.class, () -> {
             try (Statement stmt = testConn.createStatement()) {
-                stmt.execute("INSERT INTO students (student_name, email, password_hash, student_id_number) VALUES " +
+                stmt.execute("INSERT INTO students (student_name, email, password, student_id_number) VALUES " +
                     "('User 2', 'user2@example.com', 'hash', '" + idNumber + "')");
             }
         });

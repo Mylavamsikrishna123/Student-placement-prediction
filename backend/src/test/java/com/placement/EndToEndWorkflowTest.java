@@ -29,8 +29,9 @@ public class EndToEndWorkflowTest {
             stmt.execute("CREATE TABLE students (" +
                 "student_id INT AUTO_INCREMENT PRIMARY KEY, " +
                 "student_name VARCHAR(100) NOT NULL, " +
+                "student_id_number VARCHAR(50) UNIQUE, " +
                 "email VARCHAR(100) NOT NULL UNIQUE, " +
-                "password_hash VARCHAR(60), " +
+                "password VARCHAR(100), " +              // BCrypt hash (matches production)
                 "cgpa DECIMAL(4,2), " +
                 "backlogs INT DEFAULT 0, " +
                 "department VARCHAR(100), " +

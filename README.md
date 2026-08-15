@@ -1,6 +1,6 @@
 # Student Placement Prediction System
 
-A full-stack web application for predicting student placement eligibility based on CGPA and skill levels. Built with Java (SparkJava) backend and vanilla HTML/CSS/JavaScript frontend.
+A full-stack web application for predicting student placement eligibility based on CGPA and skill levels. The backend is a lightweight Java 17 service built on the JDK's built-in `com.sun.net.httpserver.HttpServer` (no web framework), with a hand-rolled JSON helper and JDBC against MySQL. The frontend is vanilla HTML/CSS/JavaScript.
 
 ## Features
 
@@ -15,32 +15,34 @@ A full-stack web application for predicting student placement eligibility based 
 ## Tech Stack
 
 ### Backend
-- **Java 17+** with **SparkJava** framework
-- **MySQL 8.x** database
-- **Maven** for dependency management
-- **BCrypt** for password hashing
-- **Gson** for JSON serialization
+- **Java 17+** using the built-in `com.sun.net.httpserver.HttpServer` (no web framework such as SparkJava)
+- **MySQL 8.x** database via JDBC (`mysql-connector-java`)
+- **Maven** for dependency management and packaging
+- **BCrypt** (`jbcrypt`) for password hashing — hashes are stored in the `password` column
+- A small custom JSON parser/serializer in `App.java` (no Gson dependency)
 
 ### Frontend
 - **HTML5, CSS3, Vanilla JavaScript** (no frameworks)
+- **Bootstrap** via CDN
 - **Fetch API** for backend communication
-- **LocalStorage** for session management
+- `sessionStorage` for auth-token / session management
 
 ### Database
-- Students, Skills, Student_Skills, Companies, Company_Skills, Admin tables
-- Password reset tokens table for forgot password functionality
+- `students`, `skills`, `student_skills`, `companies`, `company_skills`, `admin` tables
+- `password_reset_tokens` table for the forgot/reset password flow
+- BCrypt password hashes live in the `password` column of `students`/`admin`
 
 ## Project Structure
 
 ```
 Student-Placement-Prediction/
-├── backend/                 # Java SparkJava backend
+├── backend/                 # Java HttpServer backend
 │   ├── src/
 │   │   ├── main/java/com/placement/
-│   │   │   ├── App.java           # Main entry point & API routes
-│   │   │   ├── Database.java      # Database connection & queries
-│   │   │   └── models/            # Data models (Student, Company, Skill, etc.)
-│   │   └── test/                  # Comprehensive test suite (25+ test files)
+│   │   │   ├── App.java           # Main entry point, HTTP routes, JSON helpers
+│   │   │   ├── Database.java      # JDBC data access layer (BCrypt, transactions)
+│   │   │   └── models/            # Data models (Student, Company, Skill)
+│   │   └── test/                  # JUnit 5 test suite (H2 for integration tests)
 │   ├── pom.xml                    # Maven configuration
 │   └── README.md                  # Backend-specific documentation
 ├── ui/                          # Frontend HTML/CSS/JS
@@ -53,9 +55,9 @@ Student-Placement-Prediction/
 │   ├── forgot_password.html       # Password recovery request
 │   ├── reset_password.html        # Password reset form
 │   └── style.css                  # Shared styles
-├── database_schema.sql            # Complete database schema
+├── database_schema.sql            # Complete database schema (incl. password_reset_tokens)
 ├── migrations/                    # Database migration scripts
-├── Dockerfile                     # Docker configuration
+├── Dockerfile                     # Multi-stage Docker build
 ├── start.bat                      # Windows startup script
 └── QUICK_START.md                 # Quick start guide
 ```
@@ -76,7 +78,7 @@ Student-Placement-Prediction/
 mysql -u root -p < database_schema.sql
 ```
 
-Default admin credentials: `admin@placement.com` / `admin123`
+Default admin credentials: `admin@placement.com` / `admin123` (the admin password is stored as a BCrypt hash in `database_schema.sql`).
 
 ### 2. Configure Database Connection
 
@@ -119,37 +121,49 @@ Open `http://localhost:5500/index.html` in your browser.
 
 ## API Endpoints
 
+The server listens on `http://localhost:8080` (override with the `PORT` env var). All responses are JSON.
+
+### System
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/health` | Health/readiness check |
+
 ### Authentication
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/api/register` | Student registration |
-| POST | `/api/login` | Login (student/admin) |
-| POST | `/api/forgot-password` | Request password reset |
-| POST | `/api/reset-password` | Reset password with token |
+| POST | `/api/register` | Student registration `{ email, password }` |
+| POST | `/api/login` | Login `{ email, password, role }` → returns Bearer token |
+| POST | `/api/forgot-password` | Request a password reset token `{ email }` |
+| POST | `/api/verify-reset-token` | Verify a reset token `{ token }` |
+| POST | `/api/reset-password` | Reset password with token `{ token, newPassword }` |
 
 ### Student Profile
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/api/student/profile` | Save/update student profile |
 | GET | `/api/student/profile?email=...` | Get student profile |
+| POST | `/api/student/profile` | Save/update profile (requires `Authorization: Bearer <token>`) |
 
-### Companies (Admin)
+### Companies
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/api/companies` | List all companies |
-| POST | `/api/companies` | Add new company |
-| PUT | `/api/companies/{id}` | Update company |
-| DELETE | `/api/companies/{id}` | Delete company |
+| POST | `/api/companies` | Add company |
+| PUT | `/api/companies/{id}` | Update company (admin token) |
+| DELETE | `/api/companies/{id}` | Delete company (admin token) |
 
 ### Eligibility
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/api/eligible?cgpa=8.5&skills=Java:3,Python:2` | Get eligible companies |
+| POST | `/api/eligibility/check` | Compute & persist eligibility for a student `{ email }` |
+| GET | `/api/eligibility/results?studentId=...` | Get persisted eligibility results |
 
-**Matching Logic:**
+**Matching Logic** (`/api/eligible`):
 - CGPA ≥ 9.0: All companies shown
-- CGPA ≥ 7.0: Companies where student meets all required skill levels
+- CGPA ≥ 7.0: Companies where the student meets all required skill levels
 - Skill levels: 1=Beginner⭐, 2=Medium⭐⭐, 3=Advanced⭐⭐⭐
+
+> Note: `/api/eligibility/check` and `/api/eligibility/results` are the registered contexts. The server's startup banner lists the real endpoints.
 
 ## Testing
 
@@ -158,12 +172,7 @@ cd backend
 mvn test
 ```
 
-Comprehensive test suite includes:
-- Unit tests for all models and services
-- Integration tests for database operations
-- Authentication & authorization tests
-- Edge case & boundary value tests
-- Concurrency & error handling tests
+The test suite uses JUnit 5. Pure unit tests (model tests, the `App` static-helper tests) run without any database. Tests that exercise `Database` use an in-memory **H2** database in MySQL compatibility mode via the `Database(Connection)` test constructor, so no MySQL server is required for them. A small number of integration tests that need a live HTTP server + MySQL are `@Disabled` with an honest reason; see each test class for instructions on running them.
 
 ## Docker Deployment
 
@@ -175,8 +184,6 @@ docker run -p 8080:8080 -e DB_URL=... -e DB_USER=... -e DB_PASS=... placement-sy
 ## Documentation
 
 - [QUICK_START.md](QUICK_START.md) - Quick start guide
-- [FORGOT_PASSWORD_IMPLEMENTATION.md](FORGOT_PASSWORD_IMPLEMENTATION.md) - Password reset feature details
-- [TEST_EXECUTION_SUMMARY.md](TEST_EXECUTION_SUMMARY.md) - Test results summary
 - [backend/README.md](backend/README.md) - Backend-specific documentation
 
 ## License

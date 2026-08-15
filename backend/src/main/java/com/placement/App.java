@@ -87,14 +87,14 @@ public class App {
     /**
      * Validate email format (basic).
      */
-    private static boolean isValidEmail(String email) {
+    static boolean isValidEmail(String email) {
         return email != null && email.matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
     }
-    
+
     /**
      * Validate password strength.
      */
-    private static boolean isValidPassword(String password) {
+    static boolean isValidPassword(String password) {
         return password != null && password.length() >= 8;
     }
 
@@ -115,6 +115,7 @@ public class App {
         
         System.out.println("Initializing Database connection...");
         Database db = new Database();
+        db.validateConnection();
 
         System.out.println("Registering API endpoints...");
         // Health endpoint for quick readiness checks
@@ -156,27 +157,22 @@ public class App {
             String email = data.getOrDefault("email", "");
             String password = data.getOrDefault("password", "");
             String role = data.getOrDefault("role", "student");
-            
-            System.out.println("[LOGIN REQUEST] Email: " + email + ", Role: " + role);
-            
+
             if (email.isEmpty() || password.isEmpty()) {
-                System.out.println("[LOGIN FAILED] Empty credentials");
                 return sendText(ex, 400, "{\"error\":\"Email and password are required\"}");
             }
-            
+
             boolean ok = db.login(email, password, role);
             if (!ok) {
-                System.out.println("[LOGIN FAILED] Invalid credentials for: " + email);
                 return sendText(ex, 401, "{\"error\":\"Invalid credentials\"}");
             }
-            
+
             // Generate token and store
             String token = generateToken();
             long expiresAt = System.currentTimeMillis() + TOKEN_VALIDITY_MS;
             tokenStore.put(token, new TokenData(email, role, expiresAt));
-            
-            System.out.println("[LOGIN SUCCESS] User: " + email + ", Token: " + token.substring(0, 8) + "...");
-            return sendText(ex, 200, "{\"success\":true,\"token\":\"" + token + "\",\"email\":\"" + email + "\",\"role\":\"" + role + "\"}");
+
+            return sendText(ex, 200, "{\"success\":true,\"token\":\"" + token + "\",\"email\":\"" + escape(email) + "\",\"role\":\"" + escape(role) + "\"}");
         }));
 
         // ========== PASSWORD RESET ENDPOINTS ==========
@@ -185,51 +181,43 @@ public class App {
         server.createContext("/api/forgot-password", new PostHandler((ex, body) -> {
             Map<String, String> data = parseJson(body);
             String email = data.getOrDefault("email", "").trim();
-            
-            System.out.println("[FORGOT PASSWORD] Request for: " + email);
-            
+
             // Validate email format
             if (!isValidEmail(email)) {
-                System.out.println("[FORGOT PASSWORD FAILED] Invalid email format");
                 return sendText(ex, 400, "{\"error\":\"Invalid email format\"}");
             }
             
             // Generate reset token
             String token = db.generatePasswordResetToken(email);
-            
+
             if (token == null) {
-                System.out.println("[FORGOT PASSWORD] Email not found: " + email);
-                // Don't reveal if email exists or not (security best practice)
+                // Don't reveal if email exists or not (security best practice).
                 return sendText(ex, 200, "{\"success\":true,\"message\":\"If email exists, reset code has been generated\"}");
             }
-            
-            System.out.println("[FORGOT PASSWORD SUCCESS] Token generated for: " + email);
-            // In production, send token via email
-            // For demo purposes, return token in response
-            return sendText(ex, 200, 
-                "{\"success\":true,\"token\":\"" + token + "\",\"message\":\"Reset code generated\",\"expiresIn\":\"1 hour\"}");
+
+            // For local development only: log the token server-side. In production this
+            // would be sent via email and never returned in the response body.
+            System.out.println("[FORGOT PASSWORD] Reset code generated for " + email + " (dev-only log): " + token);
+            return sendText(ex, 200,
+                "{\"success\":true,\"message\":\"If email exists, reset code has been generated\",\"expiresIn\":\"1 hour\"}");
         }));
 
         // Verify reset token validity
         server.createContext("/api/verify-reset-token", new PostHandler((ex, body) -> {
             Map<String, String> data = parseJson(body);
             String token = data.getOrDefault("token", "").trim();
-            
-            System.out.println("[VERIFY TOKEN] Checking token: " + (token.length() > 8 ? token.substring(0, 8) + "..." : token));
-            
+
             if (token.isEmpty()) {
                 return sendText(ex, 400, "{\"error\":\"Token is required\"}");
             }
-            
+
             String email = db.verifyResetToken(token);
-            
+
             if (email == null) {
-                System.out.println("[VERIFY TOKEN FAILED] Invalid or expired token");
                 return sendText(ex, 400, "{\"error\":\"Invalid or expired reset code\"}");
             }
-            
-            System.out.println("[VERIFY TOKEN SUCCESS] Valid token for: " + email);
-            return sendText(ex, 200, "{\"success\":true,\"email\":\"" + email + "\"}");
+
+            return sendText(ex, 200, "{\"success\":true,\"email\":\"" + escape(email) + "\"}");
         }));
 
         // Reset password with token
@@ -237,24 +225,20 @@ public class App {
             Map<String, String> data = parseJson(body);
             String token = data.getOrDefault("token", "").trim();
             String newPassword = data.getOrDefault("newPassword", "");
-            
-            System.out.println("[RESET PASSWORD] Attempt with token: " + (token.length() > 8 ? token.substring(0, 8) + "..." : token));
-            
+
             // Validate inputs
             if (token.isEmpty()) {
                 return sendText(ex, 400, "{\"error\":\"Reset code is required\"}");
             }
-            
+
             if (!isValidPassword(newPassword)) {
-                System.out.println("[RESET PASSWORD FAILED] Invalid password format");
                 return sendText(ex, 400, "{\"error\":\"Password must be at least 8 characters\"}");
             }
-            
+
             // Reset password
             boolean success = db.resetPasswordWithToken(token, newPassword);
-            
+
             if (!success) {
-                System.out.println("[RESET PASSWORD FAILED] Invalid or expired token");
                 return sendText(ex, 400, "{\"error\":\"Invalid or expired reset code\"}");
             }
             
@@ -543,14 +527,21 @@ public class App {
         System.out.println("  API Base:    http://localhost:" + port + "/api/");
         System.out.println();
         System.out.println("  Endpoints:");
+        System.out.println("    GET  /api/health");
         System.out.println("    POST /api/register");
         System.out.println("    POST /api/login");
+        System.out.println("    POST /api/forgot-password");
+        System.out.println("    POST /api/verify-reset-token");
+        System.out.println("    POST /api/reset-password");
         System.out.println("    GET  /api/student/profile");
         System.out.println("    POST /api/student/profile");
         System.out.println("    GET  /api/companies");
         System.out.println("    POST /api/companies");
-        System.out.println("    POST /api/eligible/check");
-        System.out.println("    GET  /api/eligible/results");
+        System.out.println("    PUT  /api/companies/{id}");
+        System.out.println("    DELETE /api/companies/{id}");
+        System.out.println("    GET  /api/eligible");
+        System.out.println("    POST /api/eligibility/check");
+        System.out.println("    GET  /api/eligibility/results");
         System.out.println();
         System.out.println("  Server is ready to accept requests.");
         System.out.println("  Press Ctrl+C to stop.");
@@ -615,19 +606,24 @@ public class App {
         Headers h = ex.getResponseHeaders();
         h.add("Content-Type", "application/json; charset=utf-8");
         
-        // CORS whitelist - read from environment or default to localhost:5500
-        String allowedOrigins = System.getenv("ALLOWED_ORIGINS");
-        if (allowedOrigins == null || allowedOrigins.isEmpty()) {
-            allowedOrigins = "http://localhost:5500";
+        // CORS allow-list - read from environment or default to localhost:5500.
+        // Exact-match only (split on comma, trim) to prevent substring bypass.
+        String allowedOriginsEnv = System.getenv("ALLOWED_ORIGINS");
+        if (allowedOriginsEnv == null || allowedOriginsEnv.isEmpty()) {
+            allowedOriginsEnv = "http://localhost:5500";
         }
-        
-        // Check if Origin header matches whitelist
+        java.util.Set<String> allowed = new java.util.HashSet<>();
+        for (String o : allowedOriginsEnv.split(",")) {
+            String t = o.trim();
+            if (!t.isEmpty()) allowed.add(t);
+        }
+
         String origin = ex.getRequestHeaders().getFirst("Origin");
-        if (origin != null && allowedOrigins.contains(origin)) {
+        if (origin != null && allowed.contains(origin)) {
             h.add("Access-Control-Allow-Origin", origin);
         } else if (origin == null) {
-            // For non-browser requests or same-origin, allow first origin in list
-            String firstOrigin = allowedOrigins.split(",")[0].trim();
+            // For non-browser/same-origin requests, allow the first listed origin.
+            String firstOrigin = allowed.iterator().hasNext() ? allowed.iterator().next() : "http://localhost:5500";
             h.add("Access-Control-Allow-Origin", firstOrigin);
         }
         
@@ -781,5 +777,12 @@ public class App {
     }
 
     /** Minimal string escape for JSON content. */
-    static String escape(String s) { return s == null ? "" : s.replace("\\", "\\\\").replace("\"", "\\\""); }
+    static String escape(String s) {
+        if (s == null) return "";
+        return s.replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\n", "\\n")
+                .replace("\r", "\\r")
+                .replace("\t", "\\t");
+    }
 }

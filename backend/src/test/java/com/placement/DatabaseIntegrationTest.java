@@ -94,7 +94,7 @@ public class DatabaseIntegrationTest {
                 "password_hash VARCHAR(60))");
             
             // Insert test admin user
-            stmt.execute("INSERT INTO admin (email, password_hash) VALUES " +
+            stmt.execute("INSERT INTO admin (email, password) VALUES " +
                 "('admin@test.com', '" + BCrypt.hashpw("admin123", BCrypt.gensalt(12)) + "')");
         }
         
@@ -131,7 +131,6 @@ public class DatabaseIntegrationTest {
     // ===== REGISTRATION TESTS =====
     
     @Test
-    @Disabled("Business logic test - schema mismatch with Database class")
     @DisplayName("Register new student with BCrypt hashed password")
     public void testRegisterStudent() {
         boolean result = db.register("student@test.com", "password123", "Test Student");
@@ -140,11 +139,11 @@ public class DatabaseIntegrationTest {
         
         // Verify password is hashed
         try (PreparedStatement ps = testConn.prepareStatement(
-                "SELECT password_hash FROM students WHERE email = ?")) {
+                "SELECT password FROM students WHERE email = ?")) {
             ps.setString(1, "student@test.com");
             ResultSet rs = ps.executeQuery();
             assertTrue(rs.next());
-            String hash = rs.getString("password_hash");
+            String hash = rs.getString("password");
             assertNotNull(hash, "Password hash should be stored");
             assertTrue(BCrypt.checkpw("password123", hash), "Password should match hash");
         } catch (SQLException e) {
@@ -153,7 +152,6 @@ public class DatabaseIntegrationTest {
     }
     
     @Test
-    @Disabled("Business logic test - expects RuntimeException not thrown")
     @DisplayName("Register duplicate email should fail")
     public void testRegisterDuplicateEmail() {
         db.register("duplicate@test.com", "password123", "User One");
@@ -177,7 +175,6 @@ public class DatabaseIntegrationTest {
     // ===== LOGIN TESTS =====
     
     @Test
-    @Disabled("Business logic test - login returning false")
     @DisplayName("Login with correct BCrypt hashed password")
     public void testLoginWithHashedPassword() {
         db.register("user@test.com", "secure123", "Test User");
@@ -206,7 +203,6 @@ public class DatabaseIntegrationTest {
     }
     
     @Test
-    @Disabled("Business logic test - admin login returning false")
     @DisplayName("Admin login with correct credentials")
     public void testAdminLogin() {
         boolean result = db.login("admin@test.com", "admin123", "admin");
@@ -215,7 +211,7 @@ public class DatabaseIntegrationTest {
     }
     
     @Test
-    @Disabled("Business logic test - connection closed error")
+    @Disabled("Removed feature: plaintext auto-upgrade on login intentionally removed for security; login now rejects non-BCrypt passwords")
     @DisplayName("Legacy plaintext password auto-upgrade on login")
     public void testLegacyPasswordUpgrade() throws SQLException {
         // Insert user with plaintext password (simulating legacy data)
@@ -233,7 +229,7 @@ public class DatabaseIntegrationTest {
         
         // Verify password is now hashed
         try (PreparedStatement ps = testConn.prepareStatement(
-                "SELECT password_hash FROM students WHERE email = ?")) {
+                "SELECT password FROM students WHERE email = ?")) {
             ps.setString(1, "legacy@test.com");
             ResultSet rs = ps.executeQuery();
             assertTrue(rs.next());
@@ -246,7 +242,6 @@ public class DatabaseIntegrationTest {
     // ===== PROFILE TESTS =====
     
     @Test
-    @Disabled("Business logic test - saveProfile returning false")
     @DisplayName("Save complete student profile with skills")
     public void testSaveStudentProfile() {
         db.register("student@test.com", "password123", "John Doe");
@@ -276,11 +271,10 @@ public class DatabaseIntegrationTest {
         Map<String, Object> profile = db.getStudentProfile("student@test.com");
         assertEquals("John Doe", profile.get("name"));
         assertEquals(8.5, profile.get("cgpa"));
-        assertEquals("STU001", profile.get("id_number"));
+        assertEquals("STU001", profile.get("idNumber"));
     }
     
     @Test
-    @Disabled("Business logic test - profile data not matching")
     @DisplayName("Get student profile returns all fields")
     public void testGetStudentProfile() {
         db.register("student@test.com", "password123", "Jane Smith");
@@ -307,7 +301,7 @@ public class DatabaseIntegrationTest {
         
         assertNotNull(profile);
         assertEquals("Jane Smith", profile.get("name"));
-        assertEquals("STU002", profile.get("id_number"));
+        assertEquals("STU002", profile.get("idNumber"));
         assertEquals("IT", profile.get("department"));
         assertEquals(9.0, profile.get("cgpa"));
         assertEquals(1, profile.get("backlogs"));
@@ -318,7 +312,7 @@ public class DatabaseIntegrationTest {
     }
     
     @Test
-    @Disabled("Business logic test - duplicate ID not being detected")
+    @Disabled("saveProfile returns false on duplicate ID number instead of throwing; no exception propagated to caller")
     @DisplayName("Duplicate ID number should fail")
     public void testDuplicateIdNumber() {
         db.register("user1@test.com", "password123", "User One");
@@ -344,7 +338,6 @@ public class DatabaseIntegrationTest {
     // ===== COMPANY TESTS =====
     
     @Test
-    @Disabled("Business logic test - addCompany returning false")
     @DisplayName("Add company with skills")
     public void testAddCompany() {
         Map<String, Integer> skills = new HashMap<>();
@@ -361,7 +354,6 @@ public class DatabaseIntegrationTest {
     }
     
     @Test
-    @Disabled("Business logic test - no companies returned")
     @DisplayName("Get all companies returns full list")
     public void testGetCompanies() {
         Map<String, Integer> skills1 = new HashMap<>();
@@ -380,7 +372,6 @@ public class DatabaseIntegrationTest {
     }
     
     @Test
-    @Disabled("Business logic test - IndexOutOfBounds")
     @DisplayName("Update company details")
     public void testUpdateCompany() {
         Map<String, Integer> skills = new HashMap<>();
@@ -402,7 +393,6 @@ public class DatabaseIntegrationTest {
     }
     
     @Test
-    @Disabled("Business logic test - IndexOutOfBounds")
     @DisplayName("Delete company")
     public void testDeleteCompany() {
         Map<String, Integer> skills = new HashMap<>();
@@ -421,7 +411,6 @@ public class DatabaseIntegrationTest {
     // ===== ELIGIBILITY TESTS =====
     
     @Test
-    @Disabled("Business logic test - no eligible companies found")
     @DisplayName("Check eligibility based on CGPA and skills")
     public void testEligibilityLogic() {
         // Create student with CGPA 8.5 and Java skill level 3
@@ -454,7 +443,6 @@ public class DatabaseIntegrationTest {
     }
     
     @Test
-    @Disabled("Business logic test - ID availability check failing")
     @DisplayName("ID number uniqueness check")
     public void testIsIdNumberAvailable() {
         db.register("user@test.com", "password123", "User");

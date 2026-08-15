@@ -1,9 +1,16 @@
-# Build artifacts (but keep the final JAR)
+# Build artifacts (but keep the final deployment JAR)
 backend/target/classes/
 backend/target/generated-sources/
 backend/target/maven-archiver/
 backend/target/maven-status/
 backend/target/surefire-reports/
+backend/target/test-classes/
+backend/target/placement-backend-1.0.0.jar
+backend/target/*.jar.lastUpdated
+
+# Agent working files
+.agents_tmp/
+.agent_tmp/
 
 # IDE
 .idea/
@@ -42,6 +49,12 @@ node_modules/
 # Maven
 maven-wrapper.jar
 .mvn/wrapper/maven-wrapper.jar
+# Never commit a bundled Maven distribution; use a system-installed Maven instead
+apache-maven-*/
+
+# Generated reports / office docs (regenerated from create_test_excel.py)
+TEST_CASES_DETAILED.xlsx
+*.docx
 
 # Build directories
 dist/

@@ -1,30 +1,34 @@
 # Student Placement Prediction System - Backend
 
-Java backend using SparkJava and MySQL JDBC for the Student Placement Prediction System.
+Java backend built on the JDK's built-in `com.sun.net.httpserver.HttpServer` (no web framework) with JDBC against MySQL. A small custom JSON parser/serializer lives in `App.java` — there is no SparkJava or Gson dependency.
 
 ## Prerequisites
-- Java 17+
+- Java 17+ (JDK)
 - Maven 3.8+
-- MySQL 8.x
+- MySQL 8.x (H2 is used automatically for the test suite)
 
 ## Database Setup
 
-1. Create the database using the provided schema:
-```sql
+1. Create the database using the provided schema (run from the repo root):
+
+```bash
 mysql -u root -p < database_schema.sql
 ```
 
-Or run the SQL file in your MySQL client. The schema includes:
-- `students` - Student information
+The schema creates the `JAVAPROJECT` database and all tables the application references:
+- `students` - Student information (BCrypt hash stored in `password`)
 - `skills` - Master list of skills
 - `student_skills` - Student skill levels (1=Beginner⭐, 2=Medium⭐⭐, 3=Advanced⭐⭐⭐)
 - `companies` - Company information
 - `company_skills` - Company required skills with levels
-- `admin` - Admin credentials (default: admin@placement.com / admin123)
+- `admin` - Admin credentials (default seeded: `admin@placement.com` / `admin123`, password stored as a BCrypt hash)
+- `password_reset_tokens` - One-time reset tokens for the forgot/reset password flow
+
+> Existing deployments should also apply the scripts in `migrations/` (e.g. making `student_id_number`/`degree` nullable). A fresh `database_schema.sql` already reflects those changes.
 
 ## Configure Database Connection
 
-Set environment variables or adjust defaults in `Db.java`:
+Set environment variables (defaults are `jdbc:mysql://localhost:3306/JAVAPROJECT`, user `root`, pass `root`):
 
 **PowerShell:**
 ```powershell
@@ -40,6 +44,8 @@ export DB_USER="root"
 export DB_PASS="yourpassword"
 ```
 
+Other env vars: `PORT` (backend port, default 8080), `ALLOWED_ORIGINS` (comma-separated CORS allow-list, default `http://localhost:5500`).
+
 ## Build & Run
 
 ```bash
@@ -48,49 +54,59 @@ mvn clean package
 java -jar target/placement-backend-1.0.0-jar-with-dependencies.jar
 ```
 
-Server listens on `http://localhost:8080`.
+Server listens on `http://localhost:8080` and prints the list of registered endpoints on startup.
 
 ## API Endpoints
 
-### Authentication
-- **POST** `/api/register` - Student registration
-  ```json
-  { "name", "idNumber", "email", "password", "department", "degree" }
-  ```
+All endpoints are under `/api`. Authenticated requests must send `Authorization: Bearer <token>`.
 
-- **POST** `/api/login` - Login (student or admin)
-  ```json
-  { "email", "password", "role": "student" | "admin" }
-  ```
+### Authentication
+- **GET** `/api/health` - Readiness check
+- **POST** `/api/register` - Student registration `{ email, password }`
+- **POST** `/api/login` - Login `{ email, password, role }` → returns `{ token, email, role }`
+- **POST** `/api/forgot-password` `{ email }` - Returns a generic "if email exists, reset code sent" message
+- **POST** `/api/verify-reset-token` `{ token }` - Validates a reset token
+- **POST** `/api/reset-password` `{ token, newPassword }` - Resets the password
 
 ### Student Profile
-- **POST** `/api/student/profile` - Save student profile with skills
+- **GET** `/api/student/profile?email=...` - Get student profile
+- **POST** `/api/student/profile` - Save/update profile (requires Bearer token; students can only edit their own profile)
   ```json
-  { "email", "name", "idNumber", "department", "degree", "collegeName", "phone", "cgpa", "skills": {"Java": 3, "Python": 2} }
+  { "email", "name", "idNumber", "department", "degree", "collegeName", "phone", "cgpa", "skills": {"Java": 3, "Python": 2}, "certifications", "backlogs" }
   ```
 
 ### Companies
-- **GET** `/api/companies` - Get all companies
-- **POST** `/api/companies` - Add company
-  ```json
-  { "name", "link", "skills": {"Java": 3, "Python": 2} }
-  ```
+- **GET** `/api/companies` - List all companies
+- **POST** `/api/companies` - Add company `{ name, link, requiredCgpa, skills }`
+- **PUT** `/api/companies/{id}` - Update company (admin token)
+- **DELETE** `/api/companies/{id}` - Delete company (admin token)
 
 ### Eligibility
 - **GET** `/api/eligible?cgpa=8.5&skills=Java:3,Python:2` - Get eligible companies
+- **POST** `/api/eligibility/check` `{ email }` - Compute & persist eligibility for a student
+- **GET** `/api/eligibility/results?studentId=...` - Get persisted eligibility results
 
-**Matching Rules:**
+**Matching Rules** (`/api/eligible`):
 - If CGPA ≥ 9.0: Show all companies
 - If CGPA ≥ 7.0: Show companies where student meets all required skill levels
 - Skill levels: 1=Beginner⭐, 2=Medium⭐⭐, 3=Advanced⭐⭐⭐
 
+## Testing
+
+```bash
+cd backend
+mvn test
+```
+
+JUnit 5 tests. Pure unit tests run without a database; `Database`-exercising tests use in-memory H2 (MySQL mode) via the `Database(Connection)` test constructor. Tests requiring a live HTTP server + MySQL are `@Disabled` with instructions.
+
 ## Frontend
 
-The frontend HTML files are in the root directory. Serve them using:
+The frontend HTML files are in `../ui`. Serve them with:
+
 ```bash
+cd ../ui
 python -m http.server 5500
 ```
 
-Then open `http://localhost:5500/index.html` in your browser.
-
-Frontend pages call the API at `http://localhost:8080`.
+Then open `http://localhost:5500/index.html`. The frontend calls the API at `http://localhost:8080`.

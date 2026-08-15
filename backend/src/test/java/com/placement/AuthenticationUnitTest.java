@@ -16,7 +16,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @DisplayName("Authentication Unit Tests")
 public class AuthenticationUnitTest {
     
-    private static final String H2_URL = "jdbc:h2:mem:testdb_auth;MODE=MySQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1";
+    private static final String H2_URL = "jdbc:h2:mem:testdb_auth_unit;MODE=MySQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1";
     private Connection testConn;
     private Database db;
     
@@ -30,7 +30,6 @@ public class AuthenticationUnitTest {
                 "student_id INT AUTO_INCREMENT PRIMARY KEY, " +
                 "student_name VARCHAR(100) NOT NULL, " +
                 "email VARCHAR(100) NOT NULL UNIQUE, " +
-                "password_hash VARCHAR(60), " +
                 "password VARCHAR(100), " +
                 "department VARCHAR(100), " +
                 "branch VARCHAR(100), " +
@@ -45,7 +44,6 @@ public class AuthenticationUnitTest {
             stmt.execute("CREATE TABLE admin (" +
                 "admin_id INT AUTO_INCREMENT PRIMARY KEY, " +
                 "email VARCHAR(100) NOT NULL UNIQUE, " +
-                "password_hash VARCHAR(60), " +
                 "password VARCHAR(100))");
         }
     }
@@ -63,11 +61,11 @@ public class AuthenticationUnitTest {
             
             // Insert test student with BCrypt hashed password
             String hashedPassword = BCrypt.hashpw("password123", BCrypt.gensalt(12));
-            stmt.execute("INSERT INTO students (student_name, email, password_hash) VALUES ('Test Student', 'student@test.com', '" + hashedPassword + "')");
+            stmt.execute("INSERT INTO students (student_name, email, password) VALUES ('Test Student', 'student@test.com', '" + hashedPassword + "')");
             
             // Insert test admin with hashed password
             String adminHash = BCrypt.hashpw("admin123", BCrypt.gensalt(12));
-            stmt.execute("INSERT INTO admin (email, password_hash) VALUES ('admin@test.com', '" + adminHash + "')");
+            stmt.execute("INSERT INTO admin (email, password) VALUES ('admin@test.com', '" + adminHash + "')");
         }
     }
     

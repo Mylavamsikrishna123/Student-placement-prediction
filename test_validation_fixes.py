@@ -13,7 +13,9 @@ HEADERS = {"Content-Type": "application/json"}
 
 # Test data
 TEST_EMAIL = "testvalidation@example.com"
-ADMIN_EMAIL = "admin@example.com"
+# Default admin seeded by database_schema.sql is admin@placement.com / admin123.
+# (These constants are kept for reference; the script below only exercises student flows.)
+ADMIN_EMAIL = "admin@placement.com"
 ADMIN_PASS = "admin123"
 
 def print_test(test_name, result, message=""):

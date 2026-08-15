@@ -13,7 +13,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * Integration tests for API endpoints with authentication and authorization.
  * Tests token generation, validation, protected routes, and CORS.
  * 
- * NOTE: These tests require a running backend server on port 8081.
+ * NOTE: These tests require a running backend server on port 8080 (with a populated MySQL database).
  * To run these tests:
  * 1. Start the backend server: mvn spring-boot:run
  * 2. In another terminal, run: mvn test -Dtest=AuthenticationTest
@@ -24,7 +24,7 @@ import static org.junit.jupiter.api.Assertions.*;
 public class AuthenticationTest {
     
     private HttpClient client;
-    private static final String BASE_URL = "http://localhost:8081";
+    private static final String BASE_URL = "http://localhost:8080";
     private String studentToken;
     private String adminToken;
     
@@ -43,7 +43,7 @@ public class AuthenticationTest {
     // ===== REGISTRATION TESTS =====
     
     @Test
-    @Disabled("Requires running server on port 8081 - integration test")
+    @Disabled("Requires a running backend server (port 8080) with a populated MySQL database; not run in the unit-test phase")
     @DisplayName("Register with valid email and strong password")
     public void testRegisterValidUser() throws Exception {
         String requestBody = "{\"email\":\"newuser@test.com\",\"password\":\"strongpass123\"}";
@@ -62,7 +62,7 @@ public class AuthenticationTest {
     }
     
     @Test
-    @Disabled("Requires running server on port 8081 - integration test")
+    @Disabled("Requires a running backend server (port 8080) with a populated MySQL database; not run in the unit-test phase")
     @DisplayName("Register with invalid email format should fail")
     public void testRegisterInvalidEmail() throws Exception {
         String requestBody = "{\"email\":\"notanemail\",\"password\":\"password123\"}";
@@ -80,7 +80,7 @@ public class AuthenticationTest {
     }
     
     @Test
-    @Disabled("Requires running server on port 8081 - integration test")
+    @Disabled("Requires a running backend server (port 8080) with a populated MySQL database; not run in the unit-test phase")
     @DisplayName("Register with weak password should fail")
     public void testRegisterWeakPassword() throws Exception {
         String requestBody = "{\"email\":\"user@test.com\",\"password\":\"weak\"}";
@@ -100,7 +100,7 @@ public class AuthenticationTest {
     // ===== LOGIN AND TOKEN TESTS =====
     
     @Test
-    @Disabled("Requires running server on port 8081 - integration test")
+    @Disabled("Requires a running backend server (port 8080) with a populated MySQL database; not run in the unit-test phase")
     @DisplayName("Login returns token in response")
     public void testLoginReturnsToken() throws Exception {
         // First register a user
@@ -129,7 +129,7 @@ public class AuthenticationTest {
     }
     
     @Test
-    @Disabled("Requires running server on port 8081 - integration test")
+    @Disabled("Requires a running backend server (port 8080) with a populated MySQL database; not run in the unit-test phase")
     @DisplayName("Login with wrong password fails")
     public void testLoginWrongPassword() throws Exception {
         String loginBody = "{\"email\":\"tokenuser@test.com\",\"password\":\"wrongpassword\",\"role\":\"student\"}";
@@ -149,7 +149,7 @@ public class AuthenticationTest {
     // ===== PROTECTED ROUTE TESTS =====
     
     @Test
-    @Disabled("Requires running server on port 8081 - integration test")
+    @Disabled("Requires a running backend server (port 8080) with a populated MySQL database; not run in the unit-test phase")
     @DisplayName("Profile update without token returns 401")
     public void testProfileUpdateWithoutToken() throws Exception {
         String requestBody = "{\"email\":\"user@test.com\",\"name\":\"Test\",\"cgpa\":8.0}";
@@ -166,7 +166,7 @@ public class AuthenticationTest {
     }
     
     @Test
-    @Disabled("Requires running server on port 8081 - integration test")
+    @Disabled("Requires a running backend server (port 8080) with a populated MySQL database; not run in the unit-test phase")
     @DisplayName("Profile update with invalid token returns 401")
     public void testProfileUpdateWithInvalidToken() throws Exception {
         String requestBody = "{\"email\":\"user@test.com\",\"name\":\"Test\",\"cgpa\":8.0}";
@@ -184,7 +184,7 @@ public class AuthenticationTest {
     }
     
     @Test
-    @Disabled("Requires running server on port 8081 - integration test")
+    @Disabled("Requires a running backend server (port 8080) with a populated MySQL database; not run in the unit-test phase")
     @DisplayName("Profile update with valid token succeeds")
     public void testProfileUpdateWithValidToken() throws Exception {
         // Register and login to get token
@@ -228,7 +228,7 @@ public class AuthenticationTest {
     }
     
     @Test
-    @Disabled("Requires running server on port 8081 - integration test")
+    @Disabled("Requires a running backend server (port 8080) with a populated MySQL database; not run in the unit-test phase")
     @DisplayName("User cannot update another user's profile")
     public void testProfileUpdateCrossUser() throws Exception {
         // Login as user A
@@ -269,7 +269,7 @@ public class AuthenticationTest {
     // ===== ADMIN AUTHORIZATION TESTS =====
     
     @Test
-    @Disabled("Requires running server on port 8081 - integration test")
+    @Disabled("Requires a running backend server (port 8080) with a populated MySQL database; not run in the unit-test phase")
     @DisplayName("Student cannot create companies (admin only)")
     public void testStudentCannotCreateCompany() throws Exception {
         // Login as student
@@ -309,7 +309,7 @@ public class AuthenticationTest {
     // ===== CORS TESTS =====
     
     @Test
-    @Disabled("Requires running server on port 8081 - integration test")
+    @Disabled("Requires a running backend server (port 8080) with a populated MySQL database; not run in the unit-test phase")
     @DisplayName("CORS headers include Authorization")
     public void testCorsHeadersIncludeAuthorization() throws Exception {
         HttpRequest request = HttpRequest.newBuilder()
@@ -329,7 +329,7 @@ public class AuthenticationTest {
     }
     
     @Test
-    @Disabled("Requires running server on port 8081 - integration test")
+    @Disabled("Requires a running backend server (port 8080) with a populated MySQL database; not run in the unit-test phase")
     @DisplayName("OPTIONS preflight succeeds")
     public void testOptionsPreflight() throws Exception {
         HttpRequest request = HttpRequest.newBuilder()

@@ -70,7 +70,7 @@ echo       Cleaning and compiling on port 8080...
 echo       This will take 15-20 seconds...
 echo.
 
-start "BACKEND - Student Placement System" cmd /k "cd /d "%~dp0backend" && echo ================================================================ && echo    BACKEND SERVER - PORT 8080 && echo ================================================================ && echo. && echo Compiling backend... && echo. && "%~dp0apache-maven-3.9.11\bin\mvn.cmd" clean compile exec:java -Dexec.mainClass=com.placement.App"
+start "BACKEND - Student Placement System" cmd /k "cd /d "%~dp0backend" && echo ================================================================ && echo    BACKEND SERVER - PORT 8080 && echo ================================================================ && echo. && echo Compiling backend... && echo. && mvn clean compile exec:java -Dexec.mainClass=com.placement.App"
 
 timeout /t 15 /nobreak
 

@@ -84,13 +84,13 @@ public class RegistrationTest {
         db.register(email, password, name);
         
         // Verify BCrypt hash is stored
-        String sql = "SELECT password_hash FROM students WHERE email = ?";
+        String sql = "SELECT password FROM students WHERE email = ?";
         try (PreparedStatement ps = testConn.prepareStatement(sql)) {
             ps.setString(1, email);
             try (ResultSet rs = ps.executeQuery()) {
                 assertTrue(rs.next(), "Student should be found");
-                String storedHash = rs.getString("password_hash");
-                assertNotNull(storedHash, "password_hash should not be null");
+                String storedHash = rs.getString("password");
+                assertNotNull(storedHash, "password (BCrypt hash) should not be null");
                 assertTrue(BCrypt.checkpw(password, storedHash), "Password should match BCrypt hash");
             }
         }
@@ -207,12 +207,12 @@ public class RegistrationTest {
      * Helper method to retrieve password hash from database
      */
     private String getPasswordHash(String email) throws SQLException {
-        String sql = "SELECT password_hash FROM students WHERE email = ?";
+        String sql = "SELECT password FROM students WHERE email = ?";
         try (PreparedStatement ps = testConn.prepareStatement(sql)) {
             ps.setString(1, email);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
-                    return rs.getString("password_hash");
+                    return rs.getString("password");
                 }
             }
         }

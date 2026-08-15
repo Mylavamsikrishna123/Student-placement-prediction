@@ -9,17 +9,20 @@ DROP TABLE IF EXISTS companies;
 DROP TABLE IF EXISTS students;
 DROP TABLE IF EXISTS skills;
 DROP TABLE IF EXISTS admin;
+DROP TABLE IF EXISTS password_reset_tokens;
 
 -- Students table --
+-- The `password` column stores a BCrypt password hash (60 chars; VARCHAR(100) for headroom).
+-- Registration inserts NULL for student_id_number and degree; they are filled in on profile completion.
 CREATE TABLE students (
     student_id INT AUTO_INCREMENT PRIMARY KEY,
     student_name VARCHAR(100) NOT NULL,
-    student_id_number VARCHAR(50) UNIQUE, -- Nullable until student completes profile
+    student_id_number VARCHAR(50) NULL UNIQUE, -- Nullable until student completes profile
     email VARCHAR(100) NOT NULL UNIQUE,
-    password VARCHAR(100) NOT NULL,
+    password VARCHAR(100) NOT NULL,            -- BCrypt hash (no plaintext storage)
     department VARCHAR(100),
     branch VARCHAR(100),
-    degree VARCHAR(20), -- Nullable until student completes profile
+    degree VARCHAR(20) NULL,                   -- Nullable until student completes profile
     cgpa DECIMAL(4,2),
     college_name VARCHAR(150),
     phone_number VARCHAR(15),
@@ -85,18 +88,33 @@ CREATE TABLE eligibility_results (
 );
 
 -- Admin table
+-- The `password` column stores a BCrypt password hash (no plaintext storage).
 CREATE TABLE admin (
     admin_id INT AUTO_INCREMENT PRIMARY KEY,
     email VARCHAR(100) NOT NULL UNIQUE,
-    password VARCHAR(100) NOT NULL,
+    password VARCHAR(100) NOT NULL,            -- BCrypt hash
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Insert default admin credentials (admin@placement.com / admin123)
-INSERT IGNORE INTO admin (email, password) VALUES ('admin@placement.com', 'admin123');
+-- The password is stored as a BCrypt hash; there is no plaintext fallback in the application.
+INSERT IGNORE INTO admin (email, password) VALUES ('admin@placement.com', '$2a$12$mD43KDDHTBZ3VfnodIqS3uKINYRa0qkW8g1xh/WKQ0hGQQaiw83ku');
+
+-- Password Reset Tokens table (used by the forgot/reset password flow)
+CREATE TABLE password_reset_tokens (
+    token_id INT AUTO_INCREMENT PRIMARY KEY,
+    email VARCHAR(100) NOT NULL,
+    reset_token VARCHAR(64) NOT NULL UNIQUE,
+    expires_at TIMESTAMP NOT NULL,
+    used BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_email (email),
+    INDEX idx_token (reset_token),
+    INDEX idx_expires (expires_at)
+);
 
 -- Insert common skills
-INSERT IGNORE INTO skills (skill_name) VALUES 
-('Java'), ('Python'), ('C'), ('C++'), ('HTML'), ('CSS'), ('JavaScript'), 
+INSERT IGNORE INTO skills (skill_name) VALUES
+('Java'), ('Python'), ('C'), ('C++'), ('HTML'), ('CSS'), ('JavaScript'),
 ('ReactJS'), ('SQL'), ('Node.js'), ('Spring'), ('Angular'), ('Vue.js');
 
