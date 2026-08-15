@@ -182,7 +182,7 @@ async function loadEligibilityResults() {
         const companyFilter = document.getElementById('filterCompany').value;
         const eligibilityFilter = document.getElementById('filterEligibility').value;
         
-        let url = 'http://localhost:8080/api/eligibility/results';
+        let url = '/api/eligibility/results';
         const params = [];
         if (companyFilter) params.push('companyId=' + companyFilter);
         if (eligibilityFilter !== '') params.push('eligible=' + (eligibilityFilter === 'true'));
@@ -239,7 +239,7 @@ function displayEligibilityResults(results) {
 
 async function loadCompaniesForFilter() {
     try {
-        const response = await fetch('http://localhost:8080/api/companies');
+        const response = await fetch('/api/companies');
         if (!response.ok) return;
         
         const companies = await response.json();
@@ -370,7 +370,7 @@ document.getElementById('companyForm').addEventListener('submit', async function
             return;
         }
         
-        const response = await fetch('http://localhost:8080/api/companies', {
+        const response = await fetch('/api/companies', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -472,7 +472,7 @@ async function deleteCompany(companyId) {
             return;
         }
         
-        const response = await fetch('http://localhost:8080/api/companies/' + companyId, {
+        const response = await fetch('/api/companies/' + companyId, {
             method: 'DELETE',
             headers: {
                 'Content-Type': 'application/json',
@@ -502,7 +502,7 @@ async function loadCompanies(){
     const list = document.getElementById('companyList');
     list.innerHTML = '<li class="list-group-item">Loading...</li>';
     try {
-        const response = await fetch('http://localhost:8080/api/companies');
+        const response = await fetch('/api/companies');
         if (!response.ok) throw new Error('Failed to load');
         const companies = await response.json();
         
@@ -584,7 +584,7 @@ document.getElementById('saveEditBtn').addEventListener('click', async function(
             return;
         }
         
-        const response = await fetch('http://localhost:8080/api/companies/' + companyId, {
+        const response = await fetch('/api/companies/' + companyId, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',

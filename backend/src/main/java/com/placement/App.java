@@ -514,6 +514,44 @@ public class App {
             }
         });
 
+        // Serve static frontend files (ui/*.html) so a single deployment URL
+        // provides both the API and the website. The directory is configurable
+        // via the UI_DIR env var (defaults to ../ui for local dev, /app/ui in Docker).
+        String uiDir = System.getenv("UI_DIR");
+        if (uiDir == null || uiDir.isEmpty()) {
+            uiDir = "../ui";
+        }
+        final String staticDir = uiDir;
+        server.createContext("/", new HttpHandler() {
+            @Override
+            public void handle(HttpExchange ex) throws IOException {
+                try {
+                    URI uri = ex.getRequestURI();
+                    String path = uri.getPath();
+                    if (path.equals("/") || path.isEmpty()) {
+                        path = "/index.html";
+                    }
+                    // Prevent path traversal: resolve within the static dir only.
+                    java.io.File baseDir = new java.io.File(staticDir).getCanonicalFile();
+                    java.io.File file = new java.io.File(baseDir, path).getCanonicalFile();
+                    if (!file.getPath().startsWith(baseDir.getPath()) || !file.isFile()) {
+                        sendText(ex, 404, "{\"error\":\"Not found\"}");
+                        return;
+                    }
+                    String contentType = guessContentType(file.getName());
+                    byte[] content = java.nio.file.Files.readAllBytes(file.toPath());
+                    Headers h = ex.getResponseHeaders();
+                    h.add("Content-Type", contentType);
+                    h.add("Cache-Control", "no-cache");
+                    ex.sendResponseHeaders(200, content.length);
+                    try (OutputStream os = ex.getResponseBody()) { os.write(content); }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    sendText(ex, 500, "{\"error\":\"Internal error\"}");
+                }
+            }
+        });
+
         server.setExecutor(null);
         server.start();
         
@@ -602,6 +640,22 @@ public class App {
      * @param status HTTP status code
      * @param body   JSON string to write
      */
+    /**
+     * Map a filename to a MIME type for static file serving.
+     */
+    static String guessContentType(String name) {
+        String n = name.toLowerCase();
+        if (n.endsWith(".html")) return "text/html; charset=utf-8";
+        if (n.endsWith(".css")) return "text/css; charset=utf-8";
+        if (n.endsWith(".js")) return "application/javascript; charset=utf-8";
+        if (n.endsWith(".json")) return "application/json; charset=utf-8";
+        if (n.endsWith(".png")) return "image/png";
+        if (n.endsWith(".jpg") || n.endsWith(".jpeg")) return "image/jpeg";
+        if (n.endsWith(".svg")) return "image/svg+xml";
+        if (n.endsWith(".ico")) return "image/x-icon";
+        return "application/octet-stream";
+    }
+
     static int sendText(HttpExchange ex, int status, String body) throws IOException {
         Headers h = ex.getResponseHeaders();
         h.add("Content-Type", "application/json; charset=utf-8");

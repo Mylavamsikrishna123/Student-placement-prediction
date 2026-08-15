@@ -43,7 +43,7 @@ document.getElementById('studentLoginForm').addEventListener('submit', async fun
   const password = document.getElementById('loginPassword').value;
   
   try {
-    const apiUrl = 'http://localhost:8080/api/login';
+    const apiUrl = '/api/login';
     console.log('Attempting login to:', apiUrl);
     
     const response = await fetch(apiUrl, {
